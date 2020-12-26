@@ -14,17 +14,26 @@ gen_corr(
 \arguments{
 \item{D}{The number of variables, generates an D by D correlation matrix.}
 
-\item{Clusters}{a character string specifying the type of cluster structure. Available options are "none", for a correlation matrix with no clusters, "non-overlapping" for a correlation matrix with one layer of clusters, and "overlapping" for a correlation matrix with up to 4 layers and a set number of clusters per layer.}
+\item{Clusters}{a character string specifying the type of cluster structure.
+Available options are "none", for a correlation matrix with no clusters,
+"non-overlapping" for a correlation matrix with one layer of clusters, and
+"overlapping" for a correlation matrix with up to 4 layers and a set number
+of clusters per layer.}
 
-\item{Num_Clusters}{if Clusters = "non-overlapping" or Clusters = "none" then Num_Clusters is an integer value specifying the number of clusters. If Clusters = "overlapping" then Num_Clusters must be a vector, arranged in descending order, of length equal to Num_Layers specifying the number of clusters per layer.}
+\item{Num_Clusters}{if Clusters = "non-overlapping" or Clusters = "none" then
+Num_Clusters is an integer value specifying the number of clusters. If Clusters =
+"overlapping" then Num_Clusters must be a vector, arranged in descending order, of
+length equal to Num_Layers specifying the number of clusters per layer.}
 
-\item{Num_Layers}{an positive integer value between 1 and 4, specifying the number of cluster layers. Only needed if using "overlapping" clusters.}
+\item{Num_Layers}{an positive integer value between 1 and 4, specifying the number
+of cluster layers. Only needed if using "overlapping" clusters.}
 }
 \value{
 this function returns a D by D correlation matrix.
 }
 \description{
-This function allows users to easily generate ad hoc correlation matrices with a set number of clusters and up to 4 layers.
+This function allows users to easily generate ad hoc correlation
+matrices with a set number of clusters and up to 4 layers.
 }
 \examples{
 \dontrun{
@@ -44,7 +53,7 @@ gen_corr(N = 60,
          Clusters = "overlapping",
          Num_Layers = 4,
          Num_Clusters = c(10,5,3,2)) \%>\%
-                  ggcorrplot::ggcorrplot(title = "Overlapping Clusters")
+                  ggcorrplot(title = "Overlapping Clusters")
 
 }
 }

@@ -44,7 +44,7 @@ structure. Default is set to 0.}
 be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 distributions respectively. Default is "norm".}
 
-\item{marginal_dist_model}{list containing the relevant parameters for the chosen marginal_dist.
+\item{marginal_dist_model}{a list containing the relevant parameters for the chosen marginal_dist.
 marginal_dist = "norm" accepts a mean and standard deviation with defaults list(mu = 0, sigma = 1)
 respectively. marginal_dist = "t" accepts the non-centrality and degrees of freedom arguments,
 default values are list(mu = 0, df = 5). marginal_dist = "sgt" accepts the mean, sd, lambda, p

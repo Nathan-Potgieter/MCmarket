@@ -18,6 +18,8 @@
 #' GARCH series. Note the length of the resulting series will be less that that of the innovations as
 #'  ARIMA + GARCH models require up to 5 innovations (depending on the max order) to produce the first result.
 #'
+#' @importFrom dplyr tibble
+#'
 #' @examples
 #'
 #' \dontrun{

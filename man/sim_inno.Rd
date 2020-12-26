@@ -45,10 +45,10 @@ skewed-generalized-t distributions respectively. Default is "norm".}
 
 \item{marginal_dist_model}{list containing the relevant parameters for the chosen marginal_dist. For
 marginal_dist = "unif" marginal_dist_model doesn't effect output. marginal_dist = "norm" accepts a mean
-and standard deviation with defaults list(mu = 0, sigma = 1) respectively. marginal_dist = "t" accepts
+and standard deviation with defaults list(mu = 0, sd = 1) respectively. marginal_dist = "t" accepts
 the non-centrality and degrees of freedom arguments, default values are list(mu = 0, df = 5).
 marginal_dist = "sgt" accepts the mean, sd, lambda, p and q parameters
-list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
+list(mu = 0, sd = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
 by the user.}
 }
 \value{
@@ -77,7 +77,7 @@ data <- sim_inno(cor,
                  mv_df = 5,
                  marginal_dist = "sgt",
                  marginal_dist_model = list(mu = 0,
-                                            sigma = 1,
+                                            sd = 1,
                                             lambda = -0.1,
                                             p = 2,
                                             q = Inf)

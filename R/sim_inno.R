@@ -30,10 +30,10 @@
 #' skewed-generalized-t distributions respectively. Default is "norm".
 #' @param  marginal_dist_model list containing the relevant parameters for the chosen marginal_dist. For
 #' marginal_dist = "unif" marginal_dist_model doesn't effect output. marginal_dist = "norm" accepts a mean
-#' and standard deviation with defaults list(mu = 0, sigma = 1) respectively. marginal_dist = "t" accepts
+#' and standard deviation with defaults list(mu = 0, sd = 1) respectively. marginal_dist = "t" accepts
 #' the non-centrality and degrees of freedom arguments, default values are list(mu = 0, df = 5).
 #' marginal_dist = "sgt" accepts the mean, sd, lambda, p and q parameters
-#' list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
+#' list(mu = 0, sd = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
 #' by the user.
 #' @return A tibble with k+5 rows and columns containing the simulated values for each variable.
 #'
@@ -56,7 +56,7 @@
 #'                  mv_df = 5,
 #'                  marginal_dist = "sgt",
 #'                  marginal_dist_model = list(mu = 0,
-#'                                             sigma = 1,
+#'                                             sd = 1,
 #'                                             lambda = -0.1,
 #'                                             p = 2,
 #'                                             q = Inf)
@@ -76,7 +76,7 @@ sim_inno <- function(corr,
                      marginal_dist_model = NULL) {
 
     N <- nrow(corr)
-    k <- k + 5   # extra room for sim_garch to use later
+    k <- k + 5   # extra room for sim_garch to as lags at later stage.
     Cor <- P2p(corr)
 
     # Specifying  Copulas
@@ -123,12 +123,12 @@ sim_inno <- function(corr,
 
     if (marginal_dist == "norm") {
         if (is.null(marginal_dist_model)) {
-            marginal_dist_model <- list(mu=0, sigma = 1)
+            marginal_dist_model <- list(mu=0, sd = 1)
         }
 
         data <- data %>% map_df(~qnorm(.x,
                                        mean = marginal_dist_model$mu,
-                                       sd = marginal_dist_model$sigma))
+                                       sd = marginal_dist_model$sd))
         return(data)
 
     } else
@@ -149,7 +149,7 @@ sim_inno <- function(corr,
                     stop ('Please supply a valid marginal_dist_model when using marginal_dist="sgt".')
                 else
                     if (is.null(marginal_dist_model$mu)) {marginal_dist_model$mu <- 0}
-                    if (is.null(marginal_dist_model$sigma)) {marginal_dist_model$sigma <- 1}  # Do I need an else?? Seems like including it will not work
+                    if (is.null(marginal_dist_model$sd)) {marginal_dist_model$sd <- 1}  # Do I need an else?? Seems like including it will not work
                     if (is.null(marginal_dist_model$lambda)|
                        is.null(marginal_dist_model$p)|
                        is.null(marginal_dist_model$q)) stop('Please supply valid arguments for lambda, p and q when using marginal_dist = "sgt".')
@@ -157,7 +157,7 @@ sim_inno <- function(corr,
                         data <- data %>%
                             map_df(~qsgt(.x,
                                          mu =  marginal_dist_model$mu,
-                                         sigma = marginal_dist_model$sigma,
+                                         sigma = marginal_dist_model$sd,
                                          lambda = marginal_dist_model$lambda,
                                          p = marginal_dist_model$p,
                                          q = marginal_dist_model$q,

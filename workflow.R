@@ -90,3 +90,21 @@ MCmarkets %>%
          subtitle = "100 Realizations for a Market of 20 Assets") +
     theme_bw()+
     theme(legend.position = "none")
+
+
+set.seed(12345)
+inno <-
+    sim_inno(cor,
+             k = 1000,
+             mv_dist = "t",
+             mv_df = 4,  # Degrees of freedom for multivariate t distribution
+             left_cop_weight = 0, # Weight attributed to Clayton copula
+             left_cop_param = 4,
+             marginal_dist = "sgt",
+             marginal_dist_model = list(mu = 0.02, # Mean
+                                        sd = 0.03,  # Standard Deviation
+                                        lambda = -0.2, # Skewness
+                                        p = 2,  # Kurtosis - smaller => larger kurtosis
+                                        q = 1000)) # Kurtosis - smaller => larger kurtosis
+
+inno %>% map(~sd(.x))

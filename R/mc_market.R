@@ -22,7 +22,7 @@
 #' @param marginal_dist a string variable specifying the univariate distribution of each variable. Can
 #' be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 #' distributions respectively. Default is "norm".
-#' @param  marginal_dist_model list containing the relevant parameters for the chosen marginal_dist.
+#' @param  marginal_dist_model a list containing the relevant parameters for the chosen marginal_dist.
 #' marginal_dist = "norm" accepts a mean and standard deviation with defaults list(mu = 0, sigma = 1)
 #' respectively. marginal_dist = "t" accepts the non-centrality and degrees of freedom arguments,
 #' default values are list(mu = 0, df = 5). marginal_dist = "sgt" accepts the mean, sd, lambda, p
@@ -88,7 +88,7 @@ mc_market <- function(corr,
                       left_cop_weight = 0,
                       left_cop_param = 4,
                       marginal_dist = "norm",
-                      marginal_dist_model = NULL,         # may want to change to a list
+                      marginal_dist_model = NULL,
                       ts_model = list()
                       ) {
 
