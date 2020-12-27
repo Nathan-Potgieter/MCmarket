@@ -6,3 +6,4 @@
 #' a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe
 #' ratio above 2 over and ‘normal’ if the equi-weighted basket of stocks had a Sharpe
 #' in-between -0.5 and 2.
+load("corr_mats.Rda")
