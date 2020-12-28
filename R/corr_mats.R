@@ -4,6 +4,16 @@
 #' time period of 252 days between 1 January 2000 and 26 December 2020. The correlation
 #' matrices were then labelled as ‘stressed’ if the equi-weighted basket of stocks had
 #' a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe
-#' ratio above 2 over and ‘normal’ if the equi-weighted basket of stocks had a Sharpe
+#' ratio above 2  and ‘normal’ if the equi-weighted basket of stocks had a Sharpe
 #' in-between -0.5 and 2.
 load("corr_mats.Rda")
+library(tidyverse)
+corr_mats$cor_normal[[1]] %>%
+    ggcorrplot::ggcorrplot(hc.order = TRUE)
+
+corr_mats$cor_stressed[[1]] %>%
+    ggcorrplot::ggcorrplot(hc.order = TRUE)
+
+
+corr_mats$cor_rally[[1]] %>%
+    ggcorrplot::ggcorrplot(hc.order = TRUE)

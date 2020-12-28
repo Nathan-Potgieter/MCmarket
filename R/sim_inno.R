@@ -92,17 +92,20 @@ sim_inno <- function(corr,
                                 dim = N)
     } else
         if (mv_dist == "norm") {
-            Ecop <- ellipCopula(family = "normal", dispstr = "un", param = Cor, dim = N)
+            Ecop <- ellipCopula(family = "normal",
+                                dispstr = "un",
+                                param = Cor,
+                                dim = N)
         }
 
     # Left-cop (Archemedian copula)
-    if (left_cop_weight != 0) {
-        Acop <- archmCopula(family = "clayton", param = left_cop_param, dim = N)
-    }
-
-    #generating random (uniformly distributed) draws from hybrid copula's
     if (left_cop_weight < 0|left_cop_weight > 1) stop("Please provide a valid left_cop_weight between 0 and 1")
-
+    if (left_cop_weight != 0) {
+        Acop <- archmCopula(family = "clayton",
+                            param = left_cop_param,
+                            dim = N)
+    }
+    # Generating random (uniformly distributed) draws from hybrid copula's
     if (left_cop_weight == 0) {
         data <- rCopula(k, Ecop)
     } else
@@ -111,7 +114,7 @@ sim_inno <- function(corr,
         } else
             data <- left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop)
 
-    #naming and converting data to tibble
+    # Naming and converting data to tibble
     colnames(data) <- glue::glue("Asset_{1:ncol(data)}")
     data <- as_tibble(data)
 

@@ -92,19 +92,38 @@ MCmarkets %>%
     theme(legend.position = "none")
 
 
+# Note that by increasing the left_cop_weight from 0 - 0.5
+# the sd declines by approx 40%. Continuing to increase it
+# from 0.5 - 1, then returns sd back to set value. This
+# relationship seems highly non-linear. May be a serious problem.
 set.seed(12345)
 inno <-
     sim_inno(cor,
-             k = 1000,
+             k = 10000,
              mv_dist = "t",
              mv_df = 4,  # Degrees of freedom for multivariate t distribution
-             left_cop_weight = 0, # Weight attributed to Clayton copula
+             left_cop_weight = 0.005, # Weight attributed to Clayton copula
              left_cop_param = 4,
              marginal_dist = "sgt",
-             marginal_dist_model = list(mu = 0.02, # Mean
-                                        sd = 0.03,  # Standard Deviation
+             marginal_dist_model = list(mu = 0, # Mean
+                                        sd = 1,  # Standard Deviation
                                         lambda = -0.2, # Skewness
                                         p = 2,  # Kurtosis - smaller => larger kurtosis
                                         q = 1000)) # Kurtosis - smaller => larger kurtosis
 
 inno %>% map(~sd(.x))
+
+data <-
+1:10 %>% map(~sim_inno(cor,
+                       k = 1000,
+                       mv_dist = "t",
+                       mv_df = 4,  # Degrees of freedom for multivariate t distribution
+                       left_cop_weight = 1, # Weight attributed to Clayton copula
+                       left_cop_param = 4,
+                       marginal_dist = "sgt",
+                       marginal_dist_model = list(mu = 0, # Mean
+                                                  sd = 1,  # Standard Deviation
+                                                  lambda = -0.2, # Skewness
+                                                  p = 2,  # Kurtosis - smaller => larger kurtosis
+                                                  q = 1000)))
+
