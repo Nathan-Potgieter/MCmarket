@@ -79,19 +79,19 @@ corr <- gen_corr(N = 20, Clusters = "none")
 ### simulating 500 periods of returns across 50 assets.
 set.seed(12345)
 market_data <-
-         sim_asset_market(corr,
-                          k = 500,
-                          mv_dist = "norm",
-                          left_cop_weight = 0.1,
-                          marginal_dist = "norm",
-                          ts_model = list(mu = 0.000002,
-                                          omega = 0.00005,
-                                          alpha = 0.098839,
-                                          beta = 0.899506,
-                                          ar = 0.063666,
-                                          ma = NULL,
-                                          gamma = 0.12194,
-                                          delta = 1.85))
+         sim_market(corr,
+                     k = 500,
+                     mv_dist = "norm",
+                     left_cop_weight = 0.1,
+                     marginal_dist = "norm",
+                     ts_model = list(mu = 0.000002,
+                                     omega = 0.00005,
+                                     alpha = 0.098839,
+                                     beta = 0.899506,
+                                     ar = 0.063666,
+                                     ma = NULL,
+                                     gamma = 0.12194,
+                                     delta = 1.85))
 
  ### Visualising the market
  market_data \%>\%

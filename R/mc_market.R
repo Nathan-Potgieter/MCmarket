@@ -42,6 +42,7 @@
 #' no mean or variance persistence.
 #'
 #' @importFrom tidyr gather
+#' @importFrom dplyr progress_estimated
 #' @import dplyr
 #' @import purrr
 #'
@@ -81,30 +82,26 @@
 #' }
 #' @export
 mc_market <- function(corr,
-                      N = 100,
-                      k = 252,
-                      mv_dist = "t",
-                      mv_df = 3,
-                      left_cop_weight = 0,
-                      left_cop_param = 4,
-                      marginal_dist = "norm",
-                      marginal_dist_model = NULL,
-                      ts_model = list()
-                      ) {
+                       N = 100,
+                       k = 252,
+                       mv_dist = "t",
+                       mv_df = 3,
+                       left_cop_weight = 0,
+                       left_cop_param = 4,
+                       marginal_dist = "norm",
+                       marginal_dist_model = NULL,
+                       ts_model = list()
+) {
 
-        mc_data <- 1:N %>%
-            map(~sim_market(corr = corr,
-                                  k = k,
-                                  mv_dist = mv_dist,
-                                  mv_df = mv_df,
-                                  left_cop_weight = left_cop_weight,
-                                  left_cop_param = left_cop_param,
-                                  marginal_dist = marginal_dist,
-                                  marginal_dist_model = marginal_dist_model,
-                                  ts_model = ts_model)) %>% # Must add additional arguments
-            reduce(left_join, by = c("date","Asset"))
-
-    colnames(mc_data) <- c("date", "Asset", glue("Universe_{1:(ncol(mc_data)-2)}"))
-
-    mc_data %>% gather(Universe, Return, c(-date, -Asset))
+    1:N %>%
+        map_dfr(~sim_market(corr = corr,
+                            k = k,
+                            mv_dist = mv_dist,
+                            mv_df = mv_df,
+                            left_cop_weight = left_cop_weight,
+                            left_cop_param = left_cop_param,
+                            marginal_dist = marginal_dist,
+                            marginal_dist_model = marginal_dist_model,
+                            ts_model = ts_model),
+                .id = "Universe")
 }

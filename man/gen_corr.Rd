@@ -40,16 +40,16 @@ matrices with a set number of clusters and up to 4 layers.
 library(ggcorrplot)
 
 ### This generates a 50 by 50 correlation matrix with no clusters.
-gen_corr(N = 50, Clusters = "none) \%>\%
+gen_corr(D = 50, Clusters = "none) \%>\%
          ggcorrplot(title = "Overlapping Clusters")
 
 ### This generates a 50 by 50 correlation matrix with 5 non-overlapping clusters.
-gen_corr(N = 50, Clusters = "non-overlapping) \%>\%
+gen_corr(D = 50, Clusters = "non-overlapping) \%>\%
          ggcorrplot(title = "Overlapping Clusters")
 
 ### This generates a 60 by 60 correlation matrix consisting
 ### of 4 layers with 10, 5, 3 and 2 clusters respectively.
-gen_corr(N = 60,
+gen_corr(D = 60,
          Clusters = "overlapping",
          Num_Layers = 4,
          Num_Clusters = c(10,5,3,2)) \%>\%
