@@ -3,24 +3,25 @@
 \docType{data}
 \name{corr_mats}
 \alias{corr_mats}
-\title{Empirical correlation matrices included with MCmarket}
+\title{Correlation Matrices}
 \format{
-A list containing three types of labelled correlation matrices, 10
-stressed, 10 rally and 10 normal.
+A list containing three types of correlation matrices. They are
+labeled corr_normal, corr_stressed and corr_normal. Each type contains 10
+correlation matrices.
 }
 \usage{
 data(corr_mats)
 }
 \description{
-This data set contains 30 empirical correlation matrices
-calculated by randomly selecting a set of 50 stocks from the S&P 500 over a random
+This is a data set containing 30 empirical correlation matrices
+obtained by randomly selecting a set of 50 stocks from the S&P 500 over a random
 time period of 252 days between 1 January 2000 and 26 December 2020. The correlation
 matrices were then labelled as ‘stressed’ if the equi-weighted basket of stocks had
 a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe
 ratio above 2  and ‘normal’ if the equi-weighted basket of stocks had a Sharpe
 in-between -0.5 and 2.
 }
-\details{
-Data accessed via tidyquant and yahoo finance.
+\author{
+Nathan Potgieter  \email{nathan.potieter56@gmail.com}
 }
-\keyword{datasets}
+\keyword{data}

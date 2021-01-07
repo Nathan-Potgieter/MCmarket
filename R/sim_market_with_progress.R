@@ -32,7 +32,6 @@
 #'
 #' }
 #' @export
-
 sim_market_with_progress <- function(corr,
                                      k = 252,
                                      mv_dist = "t",
@@ -43,6 +42,8 @@ sim_market_with_progress <- function(corr,
                                      marginal_dist_model = NULL,
                                      ts_model = list()
 ) {
+
+    # Tick to progress bar
     pb$tick()$print()
 
     #Simulating innovations
@@ -68,7 +69,7 @@ sim_market_with_progress <- function(corr,
         )
     } else
 
-        #Applying sim_garch to each column in simdat
+    #Applying sim_garch to each column in simdat
 
         simdat <- inno %>% map_dfc(~sim_garch(innovations = .x, model =  ts_model))
 

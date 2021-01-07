@@ -65,7 +65,7 @@
 #'
 #' }
 #' @export
-
+#'
 sim_inno <- function(corr,
                      k = 252,
                      mv_dist = "t",
@@ -75,7 +75,7 @@ sim_inno <- function(corr,
                      marginal_dist = "norm",
                      marginal_dist_model = NULL) {
 
-    N <- nrow(corr)
+    Dim <- nrow(corr)
     k <- k + 5   # extra room for sim_garch to as lags at later stage.
     Cor <- P2p(corr)
 
@@ -89,13 +89,13 @@ sim_inno <- function(corr,
                                 dispstr = "un",
                                 df = mv_df,
                                 param = Cor,
-                                dim = N)
+                                dim = Dim)
     } else
         if (mv_dist == "norm") {
             Ecop <- ellipCopula(family = "normal",
                                 dispstr = "un",
                                 param = Cor,
-                                dim = N)
+                                dim = Dim)
         }
 
     # Left-cop (Archemedian copula)
@@ -103,7 +103,7 @@ sim_inno <- function(corr,
     if (left_cop_weight != 0) {
         Acop <- archmCopula(family = "clayton",
                             param = left_cop_param,
-                            dim = N)
+                            dim = Dim)
     }
     # Generating random (uniformly distributed) draws from hybrid copula's
     if (left_cop_weight == 0) {
@@ -115,7 +115,7 @@ sim_inno <- function(corr,
             data <- left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop)
 
     # Naming and converting data to tibble
-    colnames(data) <- glue::glue("Asset_{1:ncol(data)}")
+    colnames(data) <- glue::glue("Asset_{1:Dim}")
     data <- as_tibble(data)
 
     if (!(marginal_dist %in% c("norm", "t", "sgt", "unif"))) stop ("Please supply a valid marginal_dist argument")
@@ -168,3 +168,4 @@ sim_inno <- function(corr,
                         return(data)
                 }
 }
+
