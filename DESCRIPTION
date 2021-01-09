@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Nathan Potgieter
 Maintainer: Nathan Potgieter <nathan.potgieter56@gamil.com>
 Description: This R package is designed to provide users with the tools to carry out the Monte Carlo simulation of asset markets. The framework set out in the package uses Elliptical copulas to give rise to the correlation structure and the Archimedean Clayton copula to induce left-tail dependence (or dynamic correlations). 
-    Various ARIMA + GARCH models can also be called apon to produce mean and varience persistence.
+    Various ARIMA + APGARCH models can also be called apon to produce mean and varience persistence.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

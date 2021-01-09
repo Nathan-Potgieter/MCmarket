@@ -1,9 +1,12 @@
 #' @title sim_market
-#' @description This function produces a series of returns for an asset market with the
-#' given correlation matrix. The user can adjust the markets left tail dependency as well
-#' as the markets distribution and the univariate distributions of the returns.
-#' @note  It is suggested that the marginal distributions be set to mean zero and standard
-#' deviation one. Those attributes are better set in the ts_model argument.
+#' @description This function produces a series of returns for an asset market with a
+#' given correlation matrix. The user can choose between the multivariate t and normal
+#' distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
+#' The univariate asset return distributions can also be set to normal, student-t or sgt
+#' distributed. Finally, mean and variance persistence can be induced via the parameters of an
+#' ARMA + APARCH model.
+#' @note  It is suggested that, if the ts_model is used, then the marginal distributions be set
+#' to list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
 #' @param corr a correlation matrix that the simulated date will adhere to. Note that the
 #' number of variables simulated is equal to the number of columns in the correlation matrix.
 #' @param k a positive integer indicating the number of time periods to simulate. Note that
@@ -84,42 +87,133 @@
 sim_market <- function(corr,
                        k = 252,
                        mv_dist = "t",
-                       mv_df = 3,
+                       mv_df = 4,
                        left_cop_weight = 0,
-                       left_cop_param = 4,
+                       left_cop_param = 5,
                        marginal_dist = "norm",
                        marginal_dist_model = NULL,
-                       ts_model = list()
-) {
-    #Simulating innovations
-    inno <- sim_inno(corr = corr,
-                     mv_dist = mv_dist,
-                     mv_df = mv_df,
-                     left_cop_param = left_cop_param,
-                     left_cop_weight = left_cop_weight,
-                     marginal_dist = marginal_dist,
-                     marginal_dist_model = marginal_dist_model,
-                     k = k)
+                       ts_model = NULL) {
 
-    #creating a date vector
+    N <- nrow(corr)
+    k <- k + 5   # extra room for sim_garch to as lags at later stage.
+    Cor <- P2p(corr)
+
+    # Specifying  Copulas
+    # elliptical
+    if(!(mv_dist %in% c("norm", "t"))) stop("Please supply a valid argument for mv_dist")
+    else
+        if (mv_dist == "t") {
+            if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
+            Ecop <- ellipCopula(family = "t",
+                                dispstr = "un",
+                                df = mv_df,
+                                param = Cor,
+                                dim = N)
+        } else
+            if (mv_dist == "norm") {
+                Ecop <- ellipCopula(family = "normal",
+                                    dispstr = "un",
+                                    param = Cor,
+                                    dim = N)
+            }
+
+    # Left-cop (Archemedian copula)
+    if (left_cop_weight < 0|left_cop_weight > 1) stop("Please provide a valid left_cop_weight between 0 and 1")
+    if (left_cop_weight != 0) {
+        Acop <- archmCopula(family = "clayton",
+                            param = left_cop_param,
+                            dim = N)
+    }
+
+    # Generating random (uniformly distributed) draws from hybrid copula's
+    if (left_cop_weight == 0) {
+        data <- rCopula(k, Ecop)
+    } else
+        if(left_cop_weight == 1) {
+            data <- rCopula(k, Acop)
+        } else {
+            data <- (left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop))
+        }
+
+
+    # Creating a date vector
     start_date <- Sys.Date()
     dates <- rmsfuns::dateconverter(StartDate = start_date,
                                     EndDate = start_date %m+% lubridate::days(k-1),
                                     Transform = "alldays")
 
-    if (is.null(ts_model)) {
-        return(
-            inno[6:nrow(inno),] %>% mutate(date = dates, .before = `Asset_1`) %>%
-                gather(key = Asset, value = Return, -date)
-        )
+    # Making Tidy & adding date column
+    data <- as_tibble(data) %>%
+        purrr::set_names(glue::glue("Asset_{1:ncol(data)}")) %>%
+        mutate(date = dates) %>%
+        gather(Asset, Value, -date)
+
+
+    if (!(marginal_dist %in% c("norm", "t", "sgt", "unif"))) stop ("Please supply a valid marginal_dist argument")
+
+    if (marginal_dist == "unif") return(data)
+
+    # Warnings
+    if (marginal_dist == "norm" & is.null(marginal_dist_model)) marginal_dist_model <- list(mu=0, sd = 1)
+    if (marginal_dist == "t" & is.null(marginal_dist_model))  marginal_dist_model <- list(mu=0, df = 5)
+    if (marginal_dist == "sgt" & is.null(marginal_dist_model)) stop ('Please supply a valid marginal_dist_model when using marginal_dist="sgt".')
+
+    #Converting Uniform marginal distributions to norm, t or sgt.
+    args <- tibble(Asset = glue::glue("Asset_{1:N}")) %>%
+        mutate(mean = marginal_dist_model$mu,
+               sd = marginal_dist_model$sd,
+               ncp = marginal_dist_model$ncp,
+               df = marginal_dist_model$df,
+               lambda = marginal_dist_model$lambda,
+               p = marginal_dist_model$p,
+               q = marginal_dist_model$q)
+
+    if (marginal_dist == "norm") {
+
+        if(is.null(marginal_dist_model$mu)) stop('Please supply a valid mu parameter when using marginal_dist = "norm".')
+        if(is.null(marginal_dist_model$sd)) stop('Please supply a valid sd parameter when using marginal_dist = "norm".')
+
+        data <- data %>% left_join(., args, by = "Asset") %>%
+            group_by(Asset) %>%  arrange(date) %>%
+            mutate(Return =  qnorm(Value, mean, sd)) %>%
+            select(date, Asset, Return)
+
     } else
+        if (marginal_dist == "t") {
 
-    #Applying sim_garch to each column in simdat
+            if(is.null(marginal_dist_model$ncp)) stop('Please supply a valid ncp parameter when using marginal_dist = "t".')
+            if(is.null(marginal_dist_model$df)) stop('Please supply a valid df parameter when using marginal_dist = "t".')
 
-    simdat <- inno %>% map_dfc(~sim_garch(innovations = .x, model =  ts_model))
+            data <- data %>% left_join(., args, by = "Asset") %>%
+                group_by(Asset) %>%  arrange(date) %>%
+                mutate(Return = qt(Value, df =  df, ncp =  ncp)) %>%
+                select(date, Asset, Return)
 
-    #Creating final df
-    simdat %>%
-        mutate(date = dates, .before = `Asset_1`) %>%
-        gather(key = Asset, value = Return, -date)
+        } else
+            if (marginal_dist == "sgt") {
+
+                if (is.null(marginal_dist_model$mu)) marginal_dist_model$mu <- 0
+                if (is.null(marginal_dist_model$sd)) marginal_dist_model$sd <- 1
+                if (is.null(marginal_dist_model$lambda)|
+                    is.null(marginal_dist_model$p)|
+                    is.null(marginal_dist_model$q)) stop('Please supply valid arguments for lambda, p and q when using marginal_dist = "sgt".')
+
+                data <- data %>% left_join(., args, by = "Asset") %>%
+                    group_by(Asset) %>% arrange(date) %>%
+                    mutate(Return = qsgt(Value, mean, sd, lambda, p, q)) %>%
+                    select(date, Asset, Return)
+
+            }
+
+    if (is.null(ts_model)) {
+
+        data <- data %>% dplyr::filter(date >= first(date) %m+% days(5))
+        return(data)
+
+    } else {
+        # Inducing mean and/or variance persistence
+        data <- data %>% group_by(Asset) %>% arrange(date) %>%
+            mutate(Return = sim_garch(Return, model = ts_model)) %>% na.omit()
+        return(data)
+    }
 }
