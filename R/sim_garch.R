@@ -51,20 +51,21 @@
 #' }
 #' @export
 
-sim_garch <- function(innovations, model = list(), simple = TRUE) {
+sim_garch <- function(innovations,
+                      omega = NULL, alpha = NULL, gamma = NULL, beta = NULL,
+                      mu = NULL, ar = NULL, ma = NULL, delta = NULL,
+                      simple = TRUE) {
 
-    #default parameters for garch model
-    default <- list(omega = 5e-04,
-                    alpha = 0,
-                    gamma = NULL,
-                    beta = 0,
-                    mu = 0,   #changed form NULL to 0
-                    ar = NULL,
-                    ma = NULL,
-                    delta = 2)
+    # Creating model list with defaults
+    model <- list(omega = ifelse(is.null(omega), 5e-04, omega),
+                  alpha = ifelse(is.null(alpha), 0, alpha),
+                  gamma = ifelse(is.null(gamma), 0, gamma),
+                  beta = ifelse(is.null(beta), 0, beta),
+                  mu = ifelse(is.null(mu), 0, mu),   #changed form NULL to 0
+                  ar = ifelse(is.null(ar), 0, ar),
+                  ma = ifelse(is.null(ma), 0, ma),
+                  delta = ifelse(is.null(delta), 2, delta))
 
-    default[names(model)] <- model
-    model <- default
 
     #obtaining parameters and lag orders from model object
     mu <- model$mu
@@ -81,13 +82,11 @@ sim_garch <- function(innovations, model = list(), simple = TRUE) {
     order.alpha <- length(alpha)
     order.beta <- length(beta)
     max.order <- max(order.ar, order.ma, order.alpha, order.beta)
-    n <- length(innovations) - 5
-
-    if(max.order>5) stop("Please supply a volitility model with max order less than or equal to 5")
+    n <- length(innovations) - 1
 
     #Generating innovations
     z_length <- n + max.order
-    z <- c(innovations)[(6-max.order):length(innovations)]  #z is the vector of random innovation
+    z <- c(innovations)[(2-max.order):length(innovations)]  #z is the vector of random innovation
 
     h <- c(rep(model$omega/(1 - sum(model$alpha) - sum(model$beta)),
                times = max.order), rep(NA, n))    #h is the conditional standard deviation
@@ -108,11 +107,11 @@ sim_garch <- function(innovations, model = list(), simple = TRUE) {
     }
 
     if(simple == TRUE) {
-        data <- c(rep(NA, 5), y[(m + 1):(n + m)]) #removes burn in data and only provides ARIMA + GARCH series.
+        data <- c(NA, y[(m + 1):(n + m)]) #removes burn in data and only provides ARIMA + GARCH series.
     } else {
-        data <- tibble(z = c(rep(NA, 5), z[(m + 1):(n + m)]),  # Innovations
-                       h = c(rep(NA, 5), h[(m + 1):(n + m)]^deltainv), #Conditional Standard deviation
-                       y = c(rep(NA, 5), y[(m + 1):(n + m)]))  # ARIMA + GARCH series
+        data <- tibble(z = c(NA, z[(m + 1):(n + m)]),  # Innovations
+                       h = c(NA, h[(m + 1):(n + m)]^deltainv), #Conditional Standard deviation
+                       y = c(NA, y[(m + 1):(n + m)]))  # ARIMA + GARCH series
     }
     return(data)
 }

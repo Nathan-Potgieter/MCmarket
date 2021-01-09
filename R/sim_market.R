@@ -30,15 +30,17 @@
 #' default values are list(mu = 0, df = 5). marginal_dist = "sgt" accepts the mean, sd, lambda, p
 #' and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults
 #' and must therefore be set by the user.
-#' @param ts_model a list containing various ARIMA + GARCH model parameters allowing one to specify
+#' @param ts_model a list containing various ARIMA + APGARCH model parameters allowing one to specify
 #' the time series properties of the simulated returns. Note that parameter combinations resulting
 #' in non-stationary of the mean or variance will produce NAN's and that the maximum lag allowed for
-#' any given parameter is 5. The default values are set as
-#' list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2).
+#' any given parameter is 1. The default values are set as
+#' list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2). In order
+#' to set different parameters for each asset simply invert an vector of length equal to the number of assets,
+#' the first element of the vector will corresping to Asset_1, the 2nd to Asset_2 ect...
 #' See the "model" parameter under fGarch::garchSpec() for more details regarding the parameters themselves.
 #' @return a tidy tibble containing a date, Asset and Return column.
 #'
-#' @importFrom copula ellipCopula archmCopula rcopula
+#' @importFrom copula P2p ellipCopula archmCopula rCopula
 #' @importFrom glue glue
 #' @importFrom sgt qsgt
 #' @importFrom lubridate '%m+%' days
@@ -95,7 +97,7 @@ sim_market <- function(corr,
                        ts_model = NULL) {
 
     N <- nrow(corr)
-    k <- k + 5   # extra room for sim_garch to as lags at later stage.
+    k <- k + 1   # extra room for sim_garch to as a lag.
     Cor <- P2p(corr)
 
     # Specifying  Copulas
@@ -207,13 +209,47 @@ sim_market <- function(corr,
 
     if (is.null(ts_model)) {
 
-        data <- data %>% dplyr::filter(date >= first(date) %m+% days(5))
+        data <- data %>% dplyr::filter(date > first(date))
         return(data)
 
     } else {
+
+        # Warnings
+        if (!is.null(ts_model$omega) & length(ts_model$omega) != 1 & length(ts_model$omega) != N) stop("Please supply a valid vector length for omega. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$alpha) & length(ts_model$alpha) != 1 & length(ts_model$alpha) != N) stop("Please supply a valid vector length for alpha. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$gamma) & length(ts_model$gamma) != 1 & length(ts_model$gamma) != N) stop("Please supply a valid vector length for gamma. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$beta) & length(ts_model$beta) != 1 & length(ts_model$beta) != N) stop("Please supply a valid vector length for beta. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$mu) & length(ts_model$mu) != 1 & length(ts_model$mu) != N) stop("Please supply a valid vector length for mu. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$ar) & length(ts_model$ar) != 1 & length(ts_model$ar) != N) stop("Please supply a valid vector length for ar. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$ma) & length(ts_model$ma) != 1 & length(ts_model$ma) != N) stop("Please supply a valid vector length for ma. Must be of length 1 or ncol(corr).")
+        if (!is.null(ts_model$delta) & length(ts_model$delta) != 1 & length(ts_model$delta) != N) stop("Please supply a valid vector length for delta. Must be of length 1 or ncol(corr).")
+
         # Inducing mean and/or variance persistence
-        data <- data %>% group_by(Asset) %>% arrange(date) %>%
-            mutate(Return = sim_garch(Return, model = ts_model)) %>% na.omit()
+
+        # Tibble with with garh parameters and defaults
+        ts_args <- tibble(Asset = glue::glue("Asset_{1:N}")) %>%
+            mutate(omega = if (is.null(ts_model$omega)) {5e-04} else {ts_model$omega},
+                   alpha = if (is.null(ts_model$alpha)) {0} else {ts_model$alpha},
+                   gamma = if (is.null(ts_model$gamma)) {0}  else {ts_model$gamma},
+                   beta = if (is.null(ts_model$beta)) {0} else {ts_model$beta},
+                   mu = if (is.null(ts_model$mu)) {0} else {ts_model$mu},   #changed form NULL to 0
+                   ar = if (is.null(ts_model$ar)) {0} else {ts_model$ar},
+                   ma = if (is.null(ts_model$ma)) {0} else {ts_model$ma},
+                   delta = if (is.null(ts_model$delta)) {2} else {ts_model$delta})
+
+        # Inducing garch properties
+        data <- data %>% left_join(., ts_args, by = "Asset") %>%
+            arrange(date) %>% group_by(Asset) %>%
+            mutate(Return = sim_garch(innovations = Return,
+                                      omega = omega,
+                                      alpha = alpha,
+                                      gamma = gamma,
+                                      beta = beta,
+                                      mu = mu,
+                                      ar = ar,
+                                      ma = ma,
+                                      delta = delta)) %>% na.omit() %>%
+            select(date, Asset, Return)
         return(data)
     }
 }

@@ -8,12 +8,12 @@ sim_market(
   corr,
   k = 252,
   mv_dist = "t",
-  mv_df = 3,
+  mv_df = 4,
   left_cop_weight = 0,
-  left_cop_param = 4,
+  left_cop_param = 5,
   marginal_dist = "norm",
   marginal_dist_model = NULL,
-  ts_model = list()
+  ts_model = NULL
 )
 }
 \arguments{
@@ -59,13 +59,16 @@ See the "model" parameter under fGarch::garchSpec() for more details regarding t
 a tidy tibble containing a date, Asset and Return column.
 }
 \description{
-This function produces a series of returns for an asset market with the
-given correlation matrix. The user can adjust the markets left tail dependency as well
-as the markets distribution and the univariate distributions of the returns.
+This function produces a series of returns for an asset market with a
+given correlation matrix. The user can choose between the multivariate t and normal
+distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
+The univariate asset return distributions can also be set to normal, student-t or sgt
+distributed. Finally, mean and variance persistence can be induced via the parameters of an
+ARMA + APARCH model.
 }
 \note{
-It is suggested that the marginal distributions be set to mean zero and standard
-deviation one. Those attributes are better set in the ts_model argument.
+It is suggested that, if the ts_model is used, then the marginal distributions be set
+to list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
 }
 \examples{
 

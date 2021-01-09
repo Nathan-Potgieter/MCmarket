@@ -3,7 +3,6 @@
 export(gen_corr)
 export(mc_market)
 export(sim_garch)
-export(sim_inno)
 export(sim_market)
 export(sim_market_with_progress)
 import(dplyr)

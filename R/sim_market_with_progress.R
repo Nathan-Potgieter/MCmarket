@@ -32,6 +32,7 @@
 #'
 #' }
 #' @export
+#'
 sim_market_with_progress <- function(corr,
                                      k = 252,
                                      mv_dist = "t",

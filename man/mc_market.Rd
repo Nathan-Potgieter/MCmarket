@@ -68,10 +68,17 @@ no mean or variance persistence.
 }
 \description{
 This function produces an ensemble of market returns with a given correlation matrix.
-The user can adjust the markets left tail dependency as well as the markets distribution and the
-univariate distributions of the returns.
+The user can choose between the multivariate t and normal
+distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
+The univariate asset return distributions can also be set to normal, student-t or sgt
+distributed. Finally, mean and variance persistence can be induced via the parameters of an
+ARMA + APARCH model.
 }
 \note{
+See examples under sim_market_with_progress for instructions on how to add an on screen
+ progress bar when performing the Monte Carlo simulation, this is recommended as calculations may
+ take a number of minuets.
+
 It is suggested that the marginal distributions be set to mean zero and standard deviation
 one. Those attributes are better set in the ts_model argument.
 }
