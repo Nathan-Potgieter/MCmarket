@@ -1,7 +1,7 @@
 #-------------------
 # MCmarket workflow
 #-------------------
-pacman::p_load(MCmarket, dplyr, purrr, ggplot2)
+pacman::p_load(MCmarket, dplyr, purrr, ggcorrplot, ggplot2)
 
 # Generate ad hoc correlation matrix
 cor <- gen_corr(D = 20,
@@ -10,50 +10,18 @@ cor <- gen_corr(D = 20,
                 Num_Clusters = c(10, 5, 4))
 cor %>% ggcorrplot::ggcorrplot()
 
-
-# Simulating innovations
-set.seed(1234)
-inno <- sim_inno(cor,
-                 k = 252,
-                 mv_dist = "t",
-                 mv_df = 5,
-                 left_cop_weight = 0.25,
-                 left_cop_param = 4,
-                 marginal_dist = "sgt",
-                 marginal_dist_model = list(mu = 0,
-                                            sigma = 1,
-                                            lambda = -0.1,
-                                            p = 2,
-                                            q = Inf)
-                 )
-
-# ------------------
-# Applying sim_garch
-#-------------------
-market <- map_dfc(inno, ~sim_garch(.x,
-                                   model = list(mu = 0.005, alpha = 0.99,
-                                                gamma = 0.001, delta = 1.98)))
-
-# Or if applied to a single series
-r_timeseries <-
-    sim_garch(rnorm(500),
-              model = list(ar = c(0.55,0.4), alpha = 0.99, gamma = 0.001),
-              simple = FALSE)
-r_timeseries$y %>% plot(type = "l")
-
-
 #-----------------
 # Using sim_market
 #-----------------
 set.seed(12345)
-market2 <- sim_market(cor,
+market <- sim_market(cor,
                       k = 500,
                       mv_dist = "norm",
                       left_cop_weight = 0.25,
                       left_cop_param = 5,
                       ts_model = list(mu = 0.0005, alpha = 0.99,
                                       gamma = 0.5, delta = 1.98))
-market2 %>%
+market %>%
     arrange(date) %>%
     group_by(Asset) %>%
     mutate(cum_ret = cumprod(1 + Return)*100) %>%
@@ -67,6 +35,7 @@ market2 %>%
 #-----------------
 # Using mc_market
 #-----------------
+set.seed(12345)
 MCmarkets <-
     mc_market(corr = diag(20),
               N = 5,
@@ -91,6 +60,26 @@ MCmarkets %>%
     theme_bw()+
     theme(legend.position = "none")
 
+# Simulating Monte Carlo markets with a progress bar
+
+# Setting random mean and sd
+set.seed(1251)
+sd <- rnorm(20, mean =  0.1, sd = 0.03)
+mean <- rnorm(20, mean =  0.01, sd = 0.01)
+
+N <- 100
+pb <- dplyr::progress_estimated(N)
+
+MCmarkets2 <- map_dfr(1:N,
+                      ~sim_market_with_progress(corr = cor,
+                                                k = 300,
+                                                mv_dist = "t",
+                                                mv_df = 3,
+                                                marginal_dist = "norm",
+                                                marginal_dist_model = list(mu = mean, sd = sd)),
+                      .id = "Universe")
+
+object.size(x = MCmarkets2) %>% print(units = "Mb")
 
 # Note that by increasing the left_cop_weight from 0 - 0.5
 # the sd declines by approx 40%. Continuing to increase it
@@ -98,32 +87,21 @@ MCmarkets %>%
 # relationship seems highly non-linear. May be a serious problem.
 set.seed(12345)
 inno <-
-    sim_inno(cor,
-             k = 10000,
-             mv_dist = "t",
-             mv_df = 4,  # Degrees of freedom for multivariate t distribution
-             left_cop_weight = 0.005, # Weight attributed to Clayton copula
-             left_cop_param = 4,
-             marginal_dist = "sgt",
-             marginal_dist_model = list(mu = 0, # Mean
-                                        sd = 1,  # Standard Deviation
-                                        lambda = -0.2, # Skewness
-                                        p = 2,  # Kurtosis - smaller => larger kurtosis
-                                        q = 1000)) # Kurtosis - smaller => larger kurtosis
+    sim_market(cor,
+               k = 10000,
+               mv_dist = "t",
+               mv_df = 4,  # Degrees of freedom for multivariate t distribution
+               left_cop_weight = 0, # Weight attributed to Clayton copula
+               left_cop_param = 4,
+               marginal_dist = "sgt",
+               marginal_dist_model = list(mu = 0, # Mean
+                                          sd = 1,  # Standard Deviation
+                                          lambda = -0.2, # Skewness
+                                          p = 2,  # Kurtosis - smaller => larger kurtosis
+                                          q = 1000)) # Kurtosis - smaller => larger kurtosis
 
-inno %>% map(~sd(.x))
+inno %>%group_by(Asset) %>% mutate(sd = sd(Return)) %>%
+    filter(date == first(date))
 
-data <-
-1:10 %>% map(~sim_inno(cor,
-                       k = 1000,
-                       mv_dist = "t",
-                       mv_df = 4,  # Degrees of freedom for multivariate t distribution
-                       left_cop_weight = 1, # Weight attributed to Clayton copula
-                       left_cop_param = 4,
-                       marginal_dist = "sgt",
-                       marginal_dist_model = list(mu = 0, # Mean
-                                                  sd = 1,  # Standard Deviation
-                                                  lambda = -0.2, # Skewness
-                                                  p = 2,  # Kurtosis - smaller => larger kurtosis
-                                                  q = 1000)))
+
 

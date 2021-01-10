@@ -18,53 +18,58 @@ mc_market(
 )
 }
 \arguments{
-\item{corr}{a correlation matrix that the simulated date will adhere to. Note that the number of
-variables simulated is equal to the number of columns in the correlation matrix.}
+\item{corr}{a correlation matrix specifying the correlation structure of the simulated data.
+Note that the number of variables simulated is equal to the number of columns in the correlation matrix.}
 
 \item{N}{a positive integer indicating the number of markets to simulate.}
 
-\item{k}{a positive integer indicating the number of time periods to simulate. Note that
-the number of periods generated is actually equal to k + 5 as these extra observations are
-needed when applying time series properties to the data.}
+\item{k}{a positive integer indicating the number of time periods to simulate.}
 
 \item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t")
-referring to the multivariate normal and t distributions respectively. Default is 3.}
+which correspond to the multivariate normal and t distributions respectively.}
 
-\item{mv_df}{degrees of freedom of the multivariate distribution, required when mv_dist = "t".}
+\item{mv_df}{degrees of freedom of the multivariate distribution, required when mv_dist = "t". Default is 3.}
 
-\item{left_cop_weight}{a positive value between zero and one indicating the weight applied to
-the Clayton copula when creating the multivariate distribution. Note that a value between zero
+\item{left_cop_weight}{a positive value between zero and one stipulating the weight applied to
+the Clayton copula when simulating the multivariate distribution. Note that a value between zero
 and one essentially generates a hybrid distribution between the chosen mv_dist and the Clayton
 copula. Therefore, the greater the left_cop_weight the less the data will reflect the correlation
 structure. Default is set to 0.}
 
 \item{left_cop_param}{a positive value indicating the parameter of the Clayton copula. Default is 4.}
 
-\item{marginal_dist}{a string variable specifying the univariate distribution of each variable. Can
+\item{marginal_dist}{a string variable specifying the asset returns univariate distribution. Can
 be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 distributions respectively. Default is "norm".}
 
-\item{marginal_dist_model}{a list containing the relevant parameters for the chosen marginal_dist.
-marginal_dist = "norm" accepts a mean and standard deviation with defaults list(mu = 0, sigma = 1)
-respectively. marginal_dist = "t" accepts the non-centrality and degrees of freedom arguments,
-default values are list(mu = 0, df = 5). marginal_dist = "sgt" accepts the mean, sd, lambda, p
-and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults
-and must therefore be set by the user.}
+\item{marginal_dist_model}{list containing the relevant parameters for the chosen marginal_dist.
 
-\item{ts_model}{a list containing various ARIMA + GARCH model parameters allowing one to specify
+marginal_dist = "norm" accepts the mean (mu) and standard deviation (sd) arguments with their respective
+defaults set to list(mu = 0, sd = 1).
+
+marginal_dist = "t" accepts the non-centrality parameter (ncp) and degrees of freedom (df) arguments,
+default values are list(ncp = 0, df = 5).
+
+marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters
+list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
+by the user. For more information see the documentation on the qsgt function from the sgt pacakge.}
+
+\item{ts_model}{a list containing various ARMA + APGARCH model parameters allowing one to specify
 the time series properties of the simulated returns. Note that parameter combinations resulting
 in non-stationary of the mean or variance will produce NAN's and that the maximum lag allowed for
-any given parameter is 5. The default values are set as
-list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2).
-See the "model" parameter under fGarch::garchSpec() for more details regarding the parameters themselves.}
+any given parameter is 1.
+
+The default is ts_model = NULL, in which case time series time series properties are not induced, however if
+ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0,
+ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset simply insert a vector
+of length equal to the number of assets, the first element of the vector will correspond to Asset_1, the 2nd
+to Asset_2 ect...
+
+See the sim_garch function's documentation and the "model" parameter under fGarch::garchSpec() for more details
+regarding the parameters themselves.}
 }
 \value{
-if simple = TRUE a vector of the resulting ARIMA + GARCH series, else if simple = FALSE a a three
-column dataframe containing z - the innovations, h - the conditional variance and y - ARIMA + GARCH series.
-Note the length of the resulting series will be less that that of the innovations as ARIMA + GARCH models
-require up to 5 innovations (depending on the max order) to produce the first result. Set ts_model = Null
-and mean and sd as required in the marginial_dist_model parameter if one intends to simulate returns with
-no mean or variance persistence.
+a tidy tibble containing a date, Universe, Asset and Return column.
 }
 \description{
 This function produces an ensemble of market returns with a given correlation matrix.

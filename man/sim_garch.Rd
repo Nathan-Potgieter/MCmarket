@@ -4,35 +4,61 @@
 \alias{sim_garch}
 \title{sim_garch}
 \usage{
-sim_garch(innovations, model = list(), simple = TRUE)
+sim_garch(
+  innovations,
+  omega = NULL,
+  alpha = NULL,
+  gamma = NULL,
+  beta = NULL,
+  mu = NULL,
+  ar = NULL,
+  ma = NULL,
+  delta = NULL,
+  simple = TRUE
+)
 }
 \arguments{
 \item{innovations}{a vector containing the random numbers/ the innovations of the
 ARIMA + GARCH process.}
 
-\item{model}{a list containing various ARMA + APARCH parameters, allowing once to specify the
-time series properties of the simulated returns. Note that parameter combinations resulting in
-non-stationary of the mean or variance will produce NAN's. The default values are set as
- list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2).
- See the "model" parameter under _fGarch::garchSpec()_ for more details regarding the parameters.}
+\item{omega}{a positive value defining the coefficient of the variance equation, default is 5e-04.}
+
+\item{alpha}{a value defining the value of the autoregressive variance coefficient, default is 0.}
+
+\item{gamma}{a value defining the APARCH leverage parameter in the variance equation. The default
+of 0, implies no leverage effect and therefore corresponds with the standard GARCH model.}
+
+\item{beta}{a value defining the variance coefficient, default is 0.}
+
+\item{mu}{a value defining the mean, default is 0.}
+
+\item{ar}{a value defining the autoregressive ARMA coefficient, default is 0.}
+
+\item{ma}{a value defining the moving average ARMA coefficient, default is 0.}
+
+\item{delta}{a strictly positive value the delta parameter of the APARCH model. The default is 2,
+which corresponds with the standard GARCH model.}
 
 \item{simple}{a logical parameter indicating if the output should be a simple vector containing just the
 resulting ARIMA + GARCH series, or if FALSE a three column dataframe containing z - the innovations, h - the
  conditional variance and y - ARMA + APARCH series.}
 }
-\value{
-if simple = TRUE a vector of the resulting ARIMA + GARCH series, else if simple = FALSE a
-three column dataframe containing z - the innovations, h - the conditional variance and y - ARIMA +
-GARCH series. Note the length of the resulting series will be less that that of the innovations as
- ARIMA + GARCH models require up to 5 innovations (depending on the max order) to produce the first result.
-}
 \description{
-This function takes a vector of random numbers, refered to as innovations, and
-induces mean and variance persistence by inserting them into an ARMA + APARCH model.
+This function takes a vector of random numbers, referred to as innovations, and
+induces mean and variance persistence by inserting them into an ARMA(1,1) + APARCH(1,1) model.
 }
 \note{
-It is suggested that the randomly distributed numbers be mean zero and standard
-deviation one, as those attributes are better set in the model argument.
+(1) It is suggested that the randomly distributed numbers be mean zero and standard
+deviation one, as these attributes can be set by the model argument.
+
+(2) For more information on the ARMA + APARCH parameters see:
+
+Ruppert, D. and Matteson, D.S., 2011. Statistics and data analysis for financial engineering (Vol. 13). New York: Springer.
+
+ @return if simple = TRUE a vector of the resulting ARMA + APARCH series, else if simple = FALSE a
+three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA +
+APARCH series. Note the length of the resulting series will one observation less than that that of the innovations
+as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
 }
 \examples{
 
@@ -43,16 +69,16 @@ library(tidyverse)
 ### creating series of 501 innovations
 inno <-  rnorm(501)
 
-### This produces a ARIMA + GARCH series of length 500.
+### This produces a ARMA + APARCH series of length 500.
 GARCH <- sim_garch(inno,
-                   model = list(mu = 0.000002,
-                                omega = 0.00005,
-                                alpha = 0.098839,
-                                beta = 0.899506,
-                                ar = 0.063666,
-                                ma = NULL,
-                                gamma = 0.12194,
-                                delta = 1.85),
+                   mu = 0.000002,
+                   omega = 0.00005,
+                   alpha = 0.098839,
+                   beta = 0.899506,
+                   ar = 0.063666,
+                   ma = NULL,
+                   gamma = 0.12194,
+                   delta = 1.85,
                    simple = FALSE)
 
  ### Visualising the resulting series

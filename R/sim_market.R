@@ -3,41 +3,50 @@
 #' given correlation matrix. The user can choose between the multivariate t and normal
 #' distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
 #' The univariate asset return distributions can also be set to normal, student-t or sgt
-#' distributed. Finally, mean and variance persistence can be induced via the parameters of an
+#' distributions. Finally, mean and variance persistence can be induced via the parameters of an
 #' ARMA + APARCH model.
-#' @note  It is suggested that, if the ts_model is used, then the marginal distributions be set
-#' to list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
-#' @param corr a correlation matrix that the simulated date will adhere to. Note that the
-#' number of variables simulated is equal to the number of columns in the correlation matrix.
-#' @param k a positive integer indicating the number of time periods to simulate. Note that
-#' the number of periods generated is actually equal to k + 5 as these extra observations are
-#' needed when applying time series properties to the data.
+#' @note  It is suggested that, if the ts_model is used, then the marginal distributions be left
+#' as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
+#' @param corr a correlation matrix specifying the correlation structure of the simulated data.
+#' Note that the number of variables simulated is equal to the number of columns in the correlation matrix.
+#' @param k a positive integer indicating the number of time periods to simulate.
 #' @param mv_dist a string specifying the multivariate distribution. Can be one of c("norm", "t")
-#' referring to the multivariate normal and t distributions respectively. Default is 3.
-#' @param mv_df degrees of freedom of the multivariate distribution, required when mv_dist = "t".
-#' @param left_cop_weight a positive value between zero and one indicating the weight applied to
-#' the Clayton copula when creating the multivariate distribution. Note that a value between zero
+#' which correspond to the multivariate normal and t distributions respectively.
+#' @param mv_df degrees of freedom of the multivariate distribution, required when mv_dist = "t". Default is 3.
+#' @param left_cop_weight a positive value between zero and one stipulating the weight applied to
+#' the Clayton copula when simulating the multivariate distribution. Note that a value between zero
 #' and one essentially generates a hybrid distribution between the chosen mv_dist and the Clayton
 #' copula. Therefore, the greater the left_cop_weight the less the data will reflect the correlation
 #' structure. Default is set to 0.
 #' @param left_cop_param a positive value indicating the parameter of the Clayton copula. Default is 4.
-#' @param marginal_dist a string variable specifying the univariate distribution of each variable. Can
+#' @param marginal_dist a string variable specifying the asset returns univariate distribution. Can
 #' be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 #' distributions respectively. Default is "norm".
 #' @param  marginal_dist_model list containing the relevant parameters for the chosen marginal_dist.
-#' marginal_dist = "norm" accepts a mean and standard deviation with the respective defaults
-#' list(mu = 0, sigma = 1). marginal_dist = "t" accepts the non-centrality and degrees of freedom arguments,
-#' default values are list(mu = 0, df = 5). marginal_dist = "sgt" accepts the mean, sd, lambda, p
-#' and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults
-#' and must therefore be set by the user.
-#' @param ts_model a list containing various ARIMA + APGARCH model parameters allowing one to specify
+#'
+#' marginal_dist = "norm" accepts the mean (mu) and standard deviation (sd) arguments with their respective
+#' defaults set to list(mu = 0, sd = 1).
+#'
+#' marginal_dist = "t" accepts the non-centrality parameter (ncp) and degrees of freedom (df) arguments,
+#' default values are list(ncp = 0, df = 5).
+#'
+#' marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters
+#' list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
+#' by the user. For more information see the documentation on the qsgt function from the sgt pacakge.
+#' @param ts_model a list containing various ARMA + APGARCH model parameters allowing one to specify
 #' the time series properties of the simulated returns. Note that parameter combinations resulting
 #' in non-stationary of the mean or variance will produce NAN's and that the maximum lag allowed for
-#' any given parameter is 1. The default values are set as
-#' list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2). In order
-#' to set different parameters for each asset simply invert an vector of length equal to the number of assets,
-#' the first element of the vector will corresping to Asset_1, the 2nd to Asset_2 ect...
-#' See the "model" parameter under fGarch::garchSpec() for more details regarding the parameters themselves.
+#' any given parameter is 1.
+#'
+#' The default is ts_model = NULL, in which case time series time series properties are not induced, however if
+#' ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0,
+#' ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset simply insert a vector
+#' of length equal to the number of assets, the first element of the vector will correspond to Asset_1, the 2nd
+#' to Asset_2 ect...
+#'
+#' See the sim_garch function's documentation and the "model" parameter under fGarch::garchSpec() for more details
+#' regarding the parameters themselves.
+#'
 #' @return a tidy tibble containing a date, Asset and Return column.
 #'
 #' @importFrom copula P2p ellipCopula archmCopula rCopula
@@ -157,10 +166,10 @@ sim_market <- function(corr,
 
     # Warnings
     if (marginal_dist == "norm" & is.null(marginal_dist_model)) marginal_dist_model <- list(mu=0, sd = 1)
-    if (marginal_dist == "t" & is.null(marginal_dist_model))  marginal_dist_model <- list(mu=0, df = 5)
+    if (marginal_dist == "t" & is.null(marginal_dist_model))  marginal_dist_model <- list(ncp = 0, df = 5)
     if (marginal_dist == "sgt" & is.null(marginal_dist_model)) stop ('Please supply a valid marginal_dist_model when using marginal_dist="sgt".')
 
-    #Converting Uniform marginal distributions to norm, t or sgt.
+    # Converting Uniform marginal distributions to norm, t or sgt.
     args <- tibble(Asset = glue::glue("Asset_{1:N}")) %>%
         mutate(mean = marginal_dist_model$mu,
                sd = marginal_dist_model$sd,
