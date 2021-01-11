@@ -143,7 +143,7 @@ sim_market <- function(corr,
         if(left_cop_weight == 1) {
             data <- rCopula(k, Acop)
         } else {
-            data <- (left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop))
+            data <- left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop)
         }
 
 
