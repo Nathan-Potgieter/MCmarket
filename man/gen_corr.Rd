@@ -7,8 +7,7 @@
 gen_corr(
   D = 50,
   clusters = c("none", "non-overlapping", "overlapping"),
-  num_clusters = NULL,
-  num_layers = NULL
+  num_clusters = NULL
 )
 }
 \arguments{
@@ -20,13 +19,14 @@ Available options are "none", for a correlation matrix with no clusters,
 "overlapping" for a correlation matrix with up to 4 layers and a set number
 of clusters per layer.}
 
-\item{num_clusters}{if clusters = "non-overlapping" or clusters = "none" then
-num_clusters is an integer value specifying the number of clusters. If clusters =
-"overlapping" then num_clusters must be a vector, arranged in descending order, of
-length equal to num_layers specifying the number of clusters per layer.}
+\item{num_clusters}{if clusters = "none" then num_clusters is not used.
 
-\item{num_layers}{an positive integer value between 1 and 4, specifying the number
-of cluster layers. Only needed if using "overlapping" clusters.}
+If clusters = "non-overlapping" then num_clusters is an integer of length one indicating the number of clusters.
+
+If clusters = "overlapping" then num_clusters must be a vector of length less than or equal to 4. The length of
+num_clusters specifies the number of  cluster layers and the integers within the vector specify the number of clusters
+per layer. It is preferable to arranged the vector in descending order, but failing to do so can result in
+unique output but may not contain the intended number of layers.}
 }
 \value{
 this function returns a D by D correlation matrix.
@@ -41,19 +41,27 @@ library(ggcorrplot)
 
 ### This generates a 50 by 50 correlation matrix with no clusters.
 gen_corr(D = 50, clusters = "none) \%>\%
-         ggcorrplot(title = "Overlapping clusters")
+         ggcorrplot(title = "no clusters")
 
 ### This generates a 50 by 50 correlation matrix with 5 non-overlapping clusters.
 gen_corr(D = 50, clusters = "non-overlapping) \%>\%
-         ggcorrplot(title = "Overlapping clusters")
+         ggcorrplot(title = "non-overlapping clusters")
 
 ### This generates a 60 by 60 correlation matrix consisting
 ### of 4 layers with 10, 5, 3 and 2 clusters respectively.
 gen_corr(D = 60,
          clusters = "overlapping",
-         num_layers = 4,
          num_clusters = c(10,5,3,2)) \%>\%
-                  ggcorrplot(title = "Overlapping clusters")
+                  ggcorrplot(title = "overlapping clusters")
+
+### Try tinkering with the num_clusters argument in unique ways to effect the
+### within cluster correlation coefficients.
+### Two cluster layers with low overall correlation.
+gen_corr(D = 50,
+         clusters = "overlapping",
+         num_clusters = c(10,10,10,2)) \%>\%
+                  ggcorrplot(title = "overlapping clusters") \%>\%
+                  ggcorrplot(title = "overlapping clusters")
 
 }
 }

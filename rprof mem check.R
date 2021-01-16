@@ -2,7 +2,7 @@ pacman::p_load(copula, tidyverse, lubridate, profmem)
 
 p <- profmem({
 corr <- P2p(diag(50))
-N <- 1
+N <- 10
 k <- 300
 })
 

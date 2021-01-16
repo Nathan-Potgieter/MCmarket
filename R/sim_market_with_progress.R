@@ -1,7 +1,11 @@
 #' @title sim_market_with_progress
 #' @description This is an alternative version of the sim_market function that
 #' includes functionality to include a progress bar when used in purrr::map functions
-#' @note  See ??sim_market for details on use.
+#' @note  (1) See ??sim_market for details on the parameters.
+#'
+#' (2) Due to memory concerns it is suggested that users use map() over map_dfr() when simulating
+#' many markets. map_dfr() is useful when wanting to plot output with ggplot2. See examples.
+#'
 #' @return a tidy tibble containing a date, Asset and Return column.
 #'
 #' @importFrom copula ellipCopula archmCopula rcopula
@@ -22,15 +26,35 @@
 #' ### creating a correlation matrix to use as input in sim_asset_market
 #' corr <- gen_corr(N = 20, Clusters = "none")
 #'
-#'
+#'### For small N<1000, can use map_dfr for tidy output.
 #' N <- 100
 #' pb <- dplyr::progress_estimated(N)   # this must be named pb
 #' market <-
 #'       map_dfr(1:N,
 #'               ~sim_market_with_progress(corr),
-#'               .id = "Universe")
+#'               .id = "Universe") # adds an extra key/identification column.
 #'
 #' }
+#'
+#' ### Visualizing the market
+#'  market_data %>% group_by(Asset) %>%
+#'  mutate(cum_ret = 100*cumprod(1 + Return)) %>%
+#'          ggplot() +
+#'          geom_line(aes(x = date, y = cum_ret, color = Asset)) +
+#'          facet_wrap(~Asset) +
+#'          theme(legend.position = "none")
+#'
+#'
+#' ### Or for large N use map#'
+#' N <- 1000
+#' pb <- dplyr::progress_estimated(N)   # this must be named pb
+#' market <-
+#'          map(1:N,
+#'              ~sim_market_with_progress(corr),
+#'              .id = "Universe") # adds an extra key/identification column.
+#'
+#'
+#' ### For large N>1000, should rather use map for list output.
 #' @export
 #'
 sim_market_with_progress <- function(corr,
@@ -47,48 +71,35 @@ sim_market_with_progress <- function(corr,
     # Tick to progress bar
     pb$tick()$print()
 
-    # sim_market
     N <- nrow(corr)
     k <- k + 1   # extra room for sim_garch to as a lag.
     Cor <- P2p(corr)
 
-    # Specifying  Copulas
+    # Specifying  Copulas: 0.5 MB
     # elliptical
-    if(!(mv_dist %in% c("norm", "t"))) stop("Please supply a valid argument for mv_dist")
-    else
-        if (mv_dist == "t") {
-            if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
-            Ecop <- ellipCopula(family = "t",
-                                dispstr = "un",
-                                df = mv_df,
-                                param = Cor,
-                                dim = N)
+    if(!(mv_dist %in% c("norm", "t", "clayton"))) stop("Please supply a valid argument for mv_dist")
+    if (mv_dist == "t") {
+        if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
+        cop <- ellipCopula(family = "t",
+                           dispstr = "un",
+                           df = mv_df,
+                           param = Cor,
+                           dim = N)
+    } else
+        if (mv_dist == "norm") {
+            cop <- ellipCopula(family = "normal",
+                               dispstr = "un",
+                               param = Cor,
+                               dim = N)
         } else
-            if (mv_dist == "norm") {
-                Ecop <- ellipCopula(family = "normal",
-                                    dispstr = "un",
-                                    param = Cor,
-                                    dim = N)
+            if (mv_dist == "clayton") {
+                cop <- archmCopula(family = "clayton",
+                                   param = clayton_param,
+                                   dim = N)
             }
 
-    # Left-cop (Archemedian copula)
-    if (left_cop_weight < 0|left_cop_weight > 1) stop("Please provide a valid left_cop_weight between 0 and 1")
-    if (left_cop_weight != 0) {
-        Acop <- archmCopula(family = "clayton",
-                            param = left_cop_param,
-                            dim = N)
-    }
-
     # Generating random (uniformly distributed) draws from hybrid copula's
-    if (left_cop_weight == 0) {
-        data <- rCopula(k, Ecop)
-    } else
-        if(left_cop_weight == 1) {
-            data <- rCopula(k, Acop)
-        } else {
-            data <- (left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop))
-        }
-
+    #data <- rCopula(k, cop)
 
     # Creating a date vector
     start_date <- Sys.Date()
@@ -96,23 +107,26 @@ sim_market_with_progress <- function(corr,
                                     EndDate = start_date %m+% lubridate::days(k-1),
                                     Transform = "alldays")
 
-    # Making Tidy & adding date column
-    data <- as_tibble(data) %>%
-        purrr::set_names(glue::glue("Asset_{1:ncol(data)}")) %>%
+    # Generating random (uniformly distributed) draws from hybrid copula's
+    # and Making Tidy + adding date column
+    data <- as_tibble(rCopula(k, cop)) %>%
+        purrr::set_names(glue::glue("Asset_{1:N}")) %>%
         mutate(date = dates) %>%
         gather(Asset, Value, -date)
 
 
     if (!(marginal_dist %in% c("norm", "t", "sgt", "unif"))) stop ("Please supply a valid marginal_dist argument")
 
-    if (marginal_dist == "unif") return(data)
+    if (marginal_dist == "unif") {
+        return(data)
+    }
 
     # Warnings
     if (marginal_dist == "norm" & is.null(marginal_dist_model)) marginal_dist_model <- list(mu=0, sd = 1)
-    if (marginal_dist == "t" & is.null(marginal_dist_model))  marginal_dist_model <- list(mu=0, df = 5)
+    if (marginal_dist == "t" & is.null(marginal_dist_model))  marginal_dist_model <- list(ncp = 0, df = 5)
     if (marginal_dist == "sgt" & is.null(marginal_dist_model)) stop ('Please supply a valid marginal_dist_model when using marginal_dist="sgt".')
 
-    #Converting Uniform marginal distributions to norm, t or sgt.
+    # Converting Uniform marginal distributions to norm, t or sgt.
     args <- tibble(Asset = glue::glue("Asset_{1:N}")) %>%
         mutate(mean = marginal_dist_model$mu,
                sd = marginal_dist_model$sd,
@@ -130,7 +144,7 @@ sim_market_with_progress <- function(corr,
         data <- data %>% left_join(., args, by = "Asset") %>%
             group_by(Asset) %>%  arrange(date) %>%
             mutate(Return =  qnorm(Value, mean, sd)) %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
 
     } else
         if (marginal_dist == "t") {
@@ -140,8 +154,8 @@ sim_market_with_progress <- function(corr,
 
             data <- data %>% left_join(., args, by = "Asset") %>%
                 group_by(Asset) %>%  arrange(date) %>%
-                mutate(Return = qt(Value, df =  df, ncp =  ncp)) %>%
-                select(date, Asset, Return)
+                mutate(Return = qt(p = Value, df =  df, ncp =  ncp)) %>%
+                ungroup() %>% select(date, Asset, Return)
 
         } else
             if (marginal_dist == "sgt") {
@@ -155,7 +169,7 @@ sim_market_with_progress <- function(corr,
                 data <- data %>% left_join(., args, by = "Asset") %>%
                     group_by(Asset) %>% arrange(date) %>%
                     mutate(Return = qsgt(Value, mean, sd, lambda, p, q)) %>%
-                    select(date, Asset, Return)
+                    ungroup() %>% select(date, Asset, Return)
 
             }
 
@@ -201,7 +215,9 @@ sim_market_with_progress <- function(corr,
                                       ar = ar,
                                       ma = ma,
                                       delta = delta)) %>% na.omit() %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
         return(data)
     }
+
+
 }

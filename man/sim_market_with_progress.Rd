@@ -24,7 +24,10 @@ This is an alternative version of the sim_market function that
 includes functionality to include a progress bar when used in purrr::map functions
 }
 \note{
-See ??sim_market for details on use.
+(1) See ??sim_market for details on the parameters.
+
+(2) Due to memory concerns it is suggested that users use map() over map_dfr() when simulating
+many markets. map_dfr() is useful when wanting to plot output with ggplot2. See examples.
 }
 \examples{
 
@@ -36,13 +39,33 @@ library(tidyverse)
 ### creating a correlation matrix to use as input in sim_asset_market
 corr <- gen_corr(N = 20, Clusters = "none")
 
-
+### For small N<1000, can use map_dfr for tidy output.
 N <- 100
 pb <- dplyr::progress_estimated(N)   # this must be named pb
 market <-
       map_dfr(1:N,
               ~sim_market_with_progress(corr),
-              .id = "Universe")
+              .id = "Universe") # adds an extra key/identification column.
 
 }
+
+### Visualizing the market
+ market_data \%>\% group_by(Asset) \%>\%
+ mutate(cum_ret = 100*cumprod(1 + Return)) \%>\%
+         ggplot() +
+         geom_line(aes(x = date, y = cum_ret, color = Asset)) +
+         facet_wrap(~Asset) +
+         theme(legend.position = "none")
+
+
+### Or for large N use map#'
+N <- 1000
+pb <- dplyr::progress_estimated(N)   # this must be named pb
+market <-
+         map(1:N,
+             ~sim_market_with_progress(corr),
+             .id = "Universe") # adds an extra key/identification column.
+
+
+### For large N>1000, should rather use map for list output.
 }

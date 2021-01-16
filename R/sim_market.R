@@ -1,25 +1,25 @@
 #' @title sim_market
 #' @description This function produces a series of returns for an asset market with a
-#' given correlation matrix. The user can choose between the multivariate t and normal
-#' distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
-#' The univariate asset return distributions can also be set to normal, student-t or sgt
-#' distributions. Finally, mean and variance persistence can be induced via the parameters of an
-#' ARMA + APARCH model.
-#' @note  It is suggested that, if the ts_model is used, then the marginal distributions be left
-#' as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
-#' @param corr a correlation matrix specifying the correlation structure of the simulated data.
-#' Note that the number of variables simulated is equal to the number of columns in the correlation matrix.
+#' given covariance structure. The user can choose between the multivariate t and normal
+#' distributions. Alternatively, if the user wants the market to exhibit extreme left tail dependence then
+#' also select the multivariate distribution described by the Clayton copula, however, if they
+#' choose to do so the will loose the ability to to specify the markets pairwise correlation structure.
+#' The univariate asset return distributions can be set to normal, student-t or sgt
+#' distributions and mean and variance persistence, in the time-series dimension, can be induced via
+#' the parameters of an ARMA + APARCH model.
+#' @note  It is suggested that, if the ts_model argument is used, then the marginal distributions be left
+#' as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument by the
+#' mu and omega parameters respectively.
+#' @param corr a correlation matrix specifying the correlation structure of the simulated data. The number
+#' of variables simulated is equal to the number of columns/rows in the correlation matrix. When using
+#' mv_dist = "clayton" only the dimensions of the correlation matrix and hence correlations will not adhere to
+#' the inputted corr matrix.
 #' @param k a positive integer indicating the number of time periods to simulate.
-#' @param mv_dist a string specifying the multivariate distribution. Can be one of c("norm", "t")
-#' which correspond to the multivariate normal and t distributions respectively.
-#' @param mv_df degrees of freedom of the multivariate distribution, required when mv_dist = "t". Default is 3.
-#' @param left_cop_weight a positive value between zero and one stipulating the weight applied to
-#' the Clayton copula when simulating the multivariate distribution. Note that a value between zero
-#' and one essentially generates a hybrid distribution between the chosen mv_dist and the Clayton
-#' copula. Therefore, the greater the left_cop_weight the less the data will reflect the correlation
-#' structure. Default is set to 0.
-#' @param left_cop_param a positive value indicating the parameter of the Clayton copula. Default is 4.
-#' @param marginal_dist a string variable specifying the asset returns univariate distribution. Can
+#' @param mv_dist a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton")
+#' which correspond to the multivariate normal, t and Clayton distribution respectively.
+#' @param mv_df degrees of freedom of the multivariate t distribution, only used when mv_dist = "t". Default is 3.
+#' @param clayton_param a positive value indicating the Clayton copula's parameter. Default is 4.
+#' @param marginal_dist a string variable specifying the univariate distribution of the asset return series. Can
 #' be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 #' distributions respectively. Default is "norm".
 #' @param  marginal_dist_model list containing the relevant parameters for the chosen marginal_dist.
@@ -72,7 +72,6 @@
 #'          sim_market(corr,
 #'                      k = 500,
 #'                      mv_dist = "norm",
-#'                      left_cop_weight = 0.1,
 #'                      marginal_dist = "norm",
 #'                      ts_model = list(mu = 0.000002,
 #'                                      omega = 0.00005,
@@ -98,54 +97,40 @@
 sim_market <- function(corr,
                        k = 252,
                        mv_dist = "t",
-                       mv_df = 4,
-                       left_cop_weight = 0,
-                       left_cop_param = 5,
+                       mv_df = 3,
+                       clayton_param = 4,
                        marginal_dist = "norm",
                        marginal_dist_model = NULL,
                        ts_model = NULL) {
-
     N <- nrow(corr)
     k <- k + 1   # extra room for sim_garch to as a lag.
     Cor <- P2p(corr)
 
-    # Specifying  Copulas
+    # Specifying  Copulas: 0.5 MB
     # elliptical
-    if(!(mv_dist %in% c("norm", "t"))) stop("Please supply a valid argument for mv_dist")
-    else
-        if (mv_dist == "t") {
-            if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
-            Ecop <- ellipCopula(family = "t",
+    if(!(mv_dist %in% c("norm", "t", "clayton"))) stop("Please supply a valid argument for mv_dist")
+    if (mv_dist == "t") {
+        if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
+        cop <- ellipCopula(family = "t",
+                            dispstr = "un",
+                            df = mv_df,
+                            param = Cor,
+                            dim = N)
+    } else
+        if (mv_dist == "norm") {
+            cop <- ellipCopula(family = "normal",
                                 dispstr = "un",
-                                df = mv_df,
                                 param = Cor,
                                 dim = N)
         } else
-            if (mv_dist == "norm") {
-                Ecop <- ellipCopula(family = "normal",
-                                    dispstr = "un",
-                                    param = Cor,
+            if (mv_dist == "clayton") {
+                cop <- archmCopula(family = "clayton",
+                                    param = clayton_param,
                                     dim = N)
             }
 
-    # Left-cop (Archemedian copula)
-    if (left_cop_weight < 0|left_cop_weight > 1) stop("Please provide a valid left_cop_weight between 0 and 1")
-    if (left_cop_weight != 0) {
-        Acop <- archmCopula(family = "clayton",
-                            param = left_cop_param,
-                            dim = N)
-    }
-
     # Generating random (uniformly distributed) draws from hybrid copula's
-    if (left_cop_weight == 0) {
-        data <- rCopula(k, Ecop)
-    } else
-        if(left_cop_weight == 1) {
-            data <- rCopula(k, Acop)
-        } else {
-            data <- left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop)
-        }
-
+    #data <- rCopula(k, cop)
 
     # Creating a date vector
     start_date <- Sys.Date()
@@ -153,16 +138,19 @@ sim_market <- function(corr,
                                     EndDate = start_date %m+% lubridate::days(k-1),
                                     Transform = "alldays")
 
-    # Making Tidy & adding date column
-    data <- as_tibble(data) %>%
-        purrr::set_names(glue::glue("Asset_{1:ncol(data)}")) %>%
+    # Generating random (uniformly distributed) draws from hybrid copula's
+    # and Making Tidy + adding date column
+    data <- as_tibble(rCopula(k, cop)) %>%
+        purrr::set_names(glue::glue("Asset_{1:N}")) %>%
         mutate(date = dates) %>%
         gather(Asset, Value, -date)
 
 
     if (!(marginal_dist %in% c("norm", "t", "sgt", "unif"))) stop ("Please supply a valid marginal_dist argument")
 
-    if (marginal_dist == "unif") return(data)
+    if (marginal_dist == "unif") {
+        return(data)
+    }
 
     # Warnings
     if (marginal_dist == "norm" & is.null(marginal_dist_model)) marginal_dist_model <- list(mu=0, sd = 1)
@@ -187,7 +175,7 @@ sim_market <- function(corr,
         data <- data %>% left_join(., args, by = "Asset") %>%
             group_by(Asset) %>%  arrange(date) %>%
             mutate(Return =  qnorm(Value, mean, sd)) %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
 
     } else
         if (marginal_dist == "t") {
@@ -197,8 +185,8 @@ sim_market <- function(corr,
 
             data <- data %>% left_join(., args, by = "Asset") %>%
                 group_by(Asset) %>%  arrange(date) %>%
-                mutate(Return = qt(Value, df =  df, ncp =  ncp)) %>%
-                select(date, Asset, Return)
+                mutate(Return = qt(p = Value, df =  df, ncp =  ncp)) %>%
+                ungroup() %>% select(date, Asset, Return)
 
         } else
             if (marginal_dist == "sgt") {
@@ -212,7 +200,7 @@ sim_market <- function(corr,
                 data <- data %>% left_join(., args, by = "Asset") %>%
                     group_by(Asset) %>% arrange(date) %>%
                     mutate(Return = qsgt(Value, mean, sd, lambda, p, q)) %>%
-                    select(date, Asset, Return)
+                    ungroup() %>% select(date, Asset, Return)
 
             }
 
@@ -258,7 +246,9 @@ sim_market <- function(corr,
                                       ar = ar,
                                       ma = ma,
                                       delta = delta)) %>% na.omit() %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
         return(data)
     }
+
+
 }

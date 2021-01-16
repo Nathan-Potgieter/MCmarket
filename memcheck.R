@@ -3,7 +3,7 @@
 # sim_market function and measures maximum memory usage along the way
 #============================================
 
-pacman::p_load(MCmarket, tidyverse, lubridate)
+pacman::p_load(MCmarket, tidyverse, lubridate, copula)
 
 # ellipCopula memory usage
 gc1 <- gc(reset = TRUE)
@@ -11,7 +11,7 @@ Ecop <- ellipCopula(family = "t",  # 0.5Mb
                     dispstr = "un",
                     df = mv_df,
                     param = P2p(corr),
-                    dim = N)
+                    dim = 50)
 gc2 <- gc()
 cat(sprintf("mem: %.1fMb.\n", sum(gc2[,6] - gc1[,2])))
 
@@ -123,9 +123,12 @@ print(object.size(market), units = "Mb") # 6.7mb
 
 # rcopula memory usage
 gc1 <- gc(reset = TRUE)
-data <- purrr::map_dfr(1:10, ~rCopula(k, Ecop))  #22Mb
+data <- 1:10 %>% purrr::map_dfr(~rCopula(k, Ecop))  #22Mb
 gc2 <- gc()
 cat(sprintf("mem: %.1fMb.\n", sum(gc2[,6] - gc1[,2])))
 print(object.size(data), units = "Mb") # 0.2Mb
+
+
+rerun(10, ~rCopula(k, Ecop))
 
 

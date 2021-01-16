@@ -7,11 +7,11 @@
 
 
 # Packages
-pacman::p_load(copula, lubridate, dplyr, MCmarket, tidyr)
+pacman::p_load(copula, lubridate, dplyr,  tidyr)
 
 # Objects
-corr = diag(50)
-k = 500
+corr = diag(10)
+k = 15
 mv_dist = 4
 left_cop_weight = 0
 mv_dist = "norm"
@@ -19,19 +19,13 @@ mv_df = 4
 marginal_dist = "norm"
 marginal_dist_model = NULL
 
-# ==================
-# Max memory usage
-# sim_market mapped 10 times
-# ==================
-gc1 <- gc(reset = TRUE)
-market <- purrr::map_dfr(1:10, ~sim_market(diag(50), k = 500)) # the code
-gc2 <- gc()
-cat(sprintf("mem: %.1fMb.\n", sum(gc2[,6] - gc1[,2])))
 
 sim_market <- function(corr,
                        k = 252,
                        mv_dist = "t",
                        mv_df = 4,
+                       left_cop_weight = 0,
+                       left_cop_param = 5,
                        marginal_dist = "norm",
                        marginal_dist_model = NULL,
                        ts_model = NULL) {
@@ -42,26 +36,54 @@ sim_market <- function(corr,
     # Specifying  Copulas: 0.5 MB
     # elliptical
     if(!(mv_dist %in% c("norm", "t"))) stop("Please supply a valid argument for mv_dist")
-        if (mv_dist == "t") {
-            if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
-            Ecop <- ellipCopula(family = "t",
+    if (mv_dist == "t") {
+        if (is.null(mv_df)) stop('Please supply a valid degrees of freedom parameter when using mv_dist = "t".')
+        Ecop <- ellipCopula(family = "t",
+                            dispstr = "un",
+                            df = mv_df,
+                            param = Cor,
+                            dim = N)
+    } else
+        if (mv_dist == "norm") {
+            Ecop <- ellipCopula(family = "normal",
                                 dispstr = "un",
-                                df = mv_df,
                                 param = Cor,
                                 dim = N)
-        } else
-            if (mv_dist == "norm") {
-                Ecop <- ellipCopula(family = "normal",
-                                    dispstr = "un",
-                                    param = Cor,
-                                    dim = N)
-            }
+        }
+
+
+    # Left-cop (Archemedian copula)
+    if (left_cop_weight < 0|left_cop_weight > 1) stop("Please provide a valid left_cop_weight between 0 and 1")
+    if (left_cop_weight != 0) {
+        Acop <- archmCopula(family = "clayton",
+                            param = left_cop_param,
+                            dim = N)
+    }
+
+
+    # Generating random (uniformly distributed) draws from hybrid copula's: 1.8 MB
+    if (left_cop_weight == 0) {
+        data <- rCopula(k, Ecop)
+    } else
+        if(left_cop_weight == 1) {
+            data <- rCopula(k, Acop)
+        } else {
+            data <- left_cop_weight*rCopula(k, Acop) + (1-left_cop_weight)*rCopula(k, Ecop)
+        }
+
+
 
     # Creating a date vector
     start_date <- Sys.Date()
     dates <- rmsfuns::dateconverter(StartDate = start_date,
                                     EndDate = start_date %m+% lubridate::days(k-1),
                                     Transform = "alldays")
+
+    # Making Tidy & adding date column
+    data <- as_tibble(data) %>%
+        purrr::set_names(glue::glue("Asset_{1:ncol(data)}")) %>%
+        mutate(date = dates) %>%
+        gather(Asset, Value, -date)
 
 
     if (!(marginal_dist %in% c("norm", "t", "sgt", "unif"))) stop ("Please supply a valid marginal_dist argument")
@@ -93,7 +115,7 @@ sim_market <- function(corr,
         data <- data %>% left_join(., args, by = "Asset") %>%
             group_by(Asset) %>%  arrange(date) %>%
             mutate(Return =  qnorm(Value, mean, sd)) %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
 
     } else
         if (marginal_dist == "t") {
@@ -103,8 +125,8 @@ sim_market <- function(corr,
 
             data <- data %>% left_join(., args, by = "Asset") %>%
                 group_by(Asset) %>%  arrange(date) %>%
-                mutate(Return = qt(Value, df =  df, ncp =  ncp)) %>%
-                select(date, Asset, Return)
+                mutate(Return = qt(p = Value, df =  df, ncp =  ncp)) %>%
+                ungroup() %>% select(date, Asset, Return)
 
         } else
             if (marginal_dist == "sgt") {
@@ -118,7 +140,7 @@ sim_market <- function(corr,
                 data <- data %>% left_join(., args, by = "Asset") %>%
                     group_by(Asset) %>% arrange(date) %>%
                     mutate(Return = qsgt(Value, mean, sd, lambda, p, q)) %>%
-                    select(date, Asset, Return)
+                    ungroup() %>% select(date, Asset, Return)
 
             }
 
@@ -164,7 +186,25 @@ sim_market <- function(corr,
                                       ar = ar,
                                       ma = ma,
                                       delta = delta)) %>% na.omit() %>%
-            select(date, Asset, Return)
+            ungroup() %>% select(date, Asset, Return)
         return(data)
     }
+
+
 }
+
+
+# ==================
+# Max memory usage
+# sim_market mapped 10 times
+# ==================
+gc1 <- gc(reset = TRUE)
+market <- purrr::map_dfr(1:100, ~sim_market(corr = diag(50), k = 500)) # the code
+gc2 <- gc()
+cat(sprintf("mem: %.1fMb.\n", sum(gc2[,6] - gc1[,2])))
+
+gc1 <- gc(reset = TRUE)
+market <- purrr::map(1:100, ~sim_market(corr = diag(50), k = 500)) # the code
+gc2 <- gc()
+cat(sprintf("mem: %.1fMb.\n", sum(gc2[,6] - gc1[,2])))
+

@@ -8,34 +8,29 @@ sim_market(
   corr,
   k = 252,
   mv_dist = "t",
-  mv_df = 4,
-  left_cop_weight = 0,
-  left_cop_param = 5,
+  mv_df = 3,
+  clayton_param = 4,
   marginal_dist = "norm",
   marginal_dist_model = NULL,
   ts_model = NULL
 )
 }
 \arguments{
-\item{corr}{a correlation matrix specifying the correlation structure of the simulated data.
-Note that the number of variables simulated is equal to the number of columns in the correlation matrix.}
+\item{corr}{a correlation matrix specifying the correlation structure of the simulated data. The number
+of variables simulated is equal to the number of columns/rows in the correlation matrix. When using
+mv_dist = "clayton" only the dimensions of the correlation matrix and hence correlations will not adhere to
+the inputted corr matrix.}
 
 \item{k}{a positive integer indicating the number of time periods to simulate.}
 
-\item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t")
-which correspond to the multivariate normal and t distributions respectively.}
+\item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton")
+which correspond to the multivariate normal, t and Clayton distribution respectively.}
 
-\item{mv_df}{degrees of freedom of the multivariate distribution, required when mv_dist = "t". Default is 3.}
+\item{mv_df}{degrees of freedom of the multivariate t distribution, only used when mv_dist = "t". Default is 3.}
 
-\item{left_cop_weight}{a positive value between zero and one stipulating the weight applied to
-the Clayton copula when simulating the multivariate distribution. Note that a value between zero
-and one essentially generates a hybrid distribution between the chosen mv_dist and the Clayton
-copula. Therefore, the greater the left_cop_weight the less the data will reflect the correlation
-structure. Default is set to 0.}
+\item{clayton_param}{a positive value indicating the Clayton copula's parameter. Default is 4.}
 
-\item{left_cop_param}{a positive value indicating the parameter of the Clayton copula. Default is 4.}
-
-\item{marginal_dist}{a string variable specifying the asset returns univariate distribution. Can
+\item{marginal_dist}{a string variable specifying the univariate distribution of the asset return series. Can
 be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
 distributions respectively. Default is "norm".}
 
@@ -70,15 +65,18 @@ a tidy tibble containing a date, Asset and Return column.
 }
 \description{
 This function produces a series of returns for an asset market with a
-given correlation matrix. The user can choose between the multivariate t and normal
-distributions and adjust the markets left tail dependency by weighting in the Clayton copula.
-The univariate asset return distributions can also be set to normal, student-t or sgt
-distributions. Finally, mean and variance persistence can be induced via the parameters of an
-ARMA + APARCH model.
+given covariance structure. The user can choose between the multivariate t and normal
+distributions. If the user wants the market to exhibit extreme left tail dependence then
+also select the multivariate distribution described by the Clayton copula, however, if they
+choose to do so the will loose the ability to to specify the markets pairwise correlation structure.
+The univariate asset return distributions can be set to normal, student-t or sgt
+distributions and mean and variance persistence, in the time-series dimension, can be induced via
+the parameters of an ARMA + APARCH model.
 }
 \note{
-It is suggested that, if the ts_model is used, then the marginal distributions be left
-as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument.
+It is suggested that, if the ts_model argument is used, then the marginal distributions be left
+as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument by the
+mu and omega parameters respectively.
 }
 \examples{
 
@@ -95,7 +93,6 @@ market_data <-
          sim_market(corr,
                      k = 500,
                      mv_dist = "norm",
-                     left_cop_weight = 0.1,
                      marginal_dist = "norm",
                      ts_model = list(mu = 0.000002,
                                      omega = 0.00005,
