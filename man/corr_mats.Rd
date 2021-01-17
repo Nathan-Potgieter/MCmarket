@@ -21,6 +21,10 @@ a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had
 ratio above 2  and ‘normal’ if the equi-weighted basket of stocks had a Sharpe
 in-between -0.5 and 2.
 }
+\references{
+Matt Dancho and Davis Vaughan (2020). tidyquant: Tidy Quantitative Financial Analysis.
+R package version 1.0.2. https://CRAN.R-project.org/package=tidyquant
+}
 \author{
 Nathan Potgieter  \email{nathan.potieter56@gmail.com}
 }

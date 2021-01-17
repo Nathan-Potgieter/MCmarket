@@ -1,9 +1,8 @@
 #' @title mc_market
 #' @description Repeatedly reruns the the sim_market function N number of times. It is there intended for
 #' users who are not comfortable using the purrr::map functions.
-#' @note See examples under sim_market_with_progress for instructions on how to add an on screen
-#'  progress bar when performing the Monte Carlo simulation, this recommended for simulations with N >1000
-#'  as they can take a number of minuets.
+#' @note See examples under sim_market for instructions on how to add an on screen progress bar when performing
+#' the Monte Carlo simulation, this recommended for simulations with N >1000 as they can take a number of minuets.
 #'
 #' It is suggested that, if the ts_model argument is used, then the marginal distributions be left
 #' as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument by the
@@ -100,13 +99,15 @@ mc_market <- function(corr,
                       k = 252,
                       mv_dist = "t",
                       mv_df = 3,
-                      left_cop_weight = 0,
-                      left_cop_param = 4,
+                      clayton_param = 4,
                       marginal_dist = "norm",
                       marginal_dist_model = NULL,
                       ts_model = list(),
                       list = TRUE) {
     if (list == TRUE) {
+
+        pb <- dplyr::progress_estimated(N) # setting length of progress bar
+
         1:N %>%
             map(
                 ~ sim_market(

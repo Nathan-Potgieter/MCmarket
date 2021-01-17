@@ -11,6 +11,10 @@
 #' @usage data(corr_mats)
 #' @author Nathan Potgieter  \email{nathan.potieter56@gmail.com}
 #' @keywords data
+#' @references Matt Dancho and Davis Vaughan (2020). tidyquant: Tidy Quantitative Financial Analysis.
+#' R package version 1.0.2. https://CRAN.R-project.org/package=tidyquant
+#'
+#'
 #' @format A list containing three types of correlation matrices. They are
 #' labeled corr_normal, corr_stressed and corr_normal. Each type contains 10
 #' correlation matrices.

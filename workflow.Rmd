@@ -1,0 +1,248 @@
+---
+title: "workflow"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Types of Markets
+
+The first step is to think about what kind of market it is that you want to simulate. So lets start with the looking at some correlation matrices. 
+
+### ad hoc/ constructed correlation matricies
+- The function _gen_corr_ allows users to easily generate ad hoc correlation matrices with a set number of clusters and up to 4 layers.
+
+```{r corr mats}
+pacman::p_load(MCmarket, tidyverse, ggcorrplot)
+
+# First look at the diagonal correlation matrix
+corr_1 <- diag(50)
+corr_1 %>% ggcorrplot(hc.order = TRUE, title = "Diagonal Matrix")
+
+# Correlation matrix with no clusters
+corr_2 <- gen_corr(D = 50, clusters = "none")
+corr_2 %>% ggcorrplot(title = "No Clusters")
+
+# Correlation matrix with 5 clusters
+corr_3 <- gen_corr(D = 50, clusters = "non-overlapping", num_clusters = 5)
+corr_3 %>% ggcorrplot(hc.order = TRUE, title = "Five Clusters")
+
+
+# Correlation matrix with 10, 5 and 2 overlapping clusters
+corr_4 <- gen_corr(D = 50, clusters = "overlapping", num_clusters = c(10,5,2))
+corr_4 %>% ggcorrplot(hc.order = TRUE, title = "Overlapping Clusters")
+
+# The correlation matrix eigenvalues tell us about the markets various risk sources and their importance
+tibble(diag = eigen(corr_1)$value, no_clust = eigen(corr_2)$value, five_clust = eigen(corr_3)$value, overlap_clast = eigen(corr_4)$value) %>% head(10)
+
+```
+
+### Emperical
+
+If the _ad hoc_ matrices don't seem realistic enough then one can use empirical data to estimate a correlation matrix of their own. 
+
+_MCmarket_ also comes with a data set of 30 correlation matrices that were each estimated from a random subset of 50 S&P500 stocks over a random time slice of 252 days between 1 January 2000 and 1 January 2020. These correlation matrices are labeled  as ‘stressed’ if they were estimated on a market where an equi-weighted basket of stocks had a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe ratio above 2 and ‘normal’ if the equi-weighted basket of stocks had a Sharpe in-between -0.5 and 2. See _MCmarket::corr_mats_
+
+```{r emperical corr}
+corr_mats$cor_rally[[1]] %>% ggcorrplot(title = "Rally", hc.order = TRUE) +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))
+
+corr_mats$cor_normal[[2]] %>% ggcorrplot(title = "Normal", hc.order = TRUE) +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))
+
+corr_mats$cor_stressed[[2]] %>% ggcorrplot(title = "Stressed", hc.order = TRUE) +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))
+
+# The correlation matrix eigenvalues tell us about the markets various risk sources and their importance
+tibble(rally = eigen(corr_mats$cor_rally[[1]])$value, 
+       normal = eigen(corr_mats$cor_normal[[2]])$value, 
+       stressed = eigen(corr_mats$cor_stressed[[2]])$value) %>% head(10)
+
+```
+
+## Multivariate Distributions
+
+The 2nd step in deciding what kind of market to simulate is deciding on the multivariate distribution. _MCmarket_ provides functionality to select between the multivariate normal, t and Clayton copula distribution. However, note that when using the Clayton copula option the simulated markets no longer adhere to the input correlation matrix. 
+```{r sim_market}
+# Lets just use the stressed emperical matrix for now on
+corr <- corr_mats$cor_stressed[[2]]
+
+# Using sim_market
+set.seed(123)
+market_norm <-
+    sim_market(corr_4,
+               k = 500,  # 500 periods
+               mv_dist = "norm",
+               marginal_dist_model = list(mu = 0.002, sd = 0.05)) # for simplicity
+
+
+
+set.seed(123)
+market_t <-
+    sim_market(corr_4, 
+               k = 500,  # 500 periods
+               mv_dist = "t",
+               mv_df = 3,
+               marginal_dist_model = list(mu = 0.002, sd = 0.05))
+
+
+set.seed(123)
+market_clay <-
+    sim_market(corr_4, 
+               k = 500,  # 500 periods
+               mv_dist = "clayton",
+               clayton_param = 0.5,
+               marginal_dist_model = list(mu = 0.002, sd = 0.05))
+
+# Plotting Correlation mats
+nc <- market_norm %>% 
+    spread(Asset, Return) %>% 
+    select(-date) %>% 
+    cor() %>% 
+    ggcorrplot(title = "norm", hc.order = TRUE) +
+    theme(legend.position = "none", 
+          axis.title.x=element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x=element_blank())
+
+tc <- market_t %>% 
+    spread(Asset, Return) %>% 
+    select(-date) %>% 
+    cor() %>% 
+    ggcorrplot(title = "t", hc.order = TRUE) +
+    theme(legend.position = "none", 
+          axis.title.x=element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x=element_blank())
+
+cc <- market_clay %>% 
+    spread(Asset, Return) %>% 
+    select(-date) %>% 
+    cor() %>% 
+    ggcorrplot(title = "clayton", hc.order = TRUE) +
+    theme(legend.position = "none", 
+          axis.title.x=element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x=element_blank())
+
+pacman::p_load(patchwork)
+nc / tc / cc
+
+
+# To see the difference in market dist lets see 
+# how an equal weighted portfolio does. 
+pacman::p_load(rmsfuns, tbl2xts)
+
+weights <-
+    market_norm  %>% filter(date == first(date)) %>%
+    mutate(weight = 1 / n()) %>% select(date, Asset , weight) %>%
+    spread(Asset, weight) %>% tbl_xts()
+
+R_norm <- market_norm %>% spread(Asset, Return) %>% tbl_xts()
+R_t <- market_t %>% spread(Asset, Return) %>% tbl_xts()
+R_clay <- market_clay %>% spread(Asset, Return) %>% tbl_xts()
+
+return_norm <- Safe_Return.portfolio(R_norm, weights) %>% xts_tbl() %>%
+    mutate( norm = portfolio.returns) %>% select(-portfolio.returns)
+
+return_t <- Safe_Return.portfolio(R_t, weights) %>% xts_tbl() %>% 
+    mutate(t = portfolio.returns) %>% select(-portfolio.returns)
+
+return_clay <- Safe_Return.portfolio(R_clay, weights) %>% xts_tbl() %>% 
+    mutate(clay = portfolio.returns) %>% select(-portfolio.returns)
+
+# Plotting and compairing cumuative returns over time
+left_join(return_norm, return_t) %>% left_join(return_clay) %>% 
+    gather(MV_Dist, Return, -date) %>% 
+    group_by(MV_Dist) %>% arrange(date) %>% 
+    mutate(cumulative_ret = cumprod(1+Return)*100) %>% 
+    ggplot(aes(x=date,y=cumulative_ret,color=MV_Dist)) + 
+    geom_line(size=0.7) + 
+    theme_bw()
+
+```
+
+## Univariate/Marginal Distributions
+
+The next step is to decide on the return distributions of the individual assets. _MCmarket_ allows one to select between the normal, t and skewed generalized t (sgt) distribution. Where the sgt is the most general and thereby nests nests a number of alternative distributions. 
+
+The first part of this step comes down to deciding if you want returns to be fat or thin tailed. If you want thin tailed returns then use the normal or t distribution with many degrees of freedom. If you want fat tails then use the t-distribution with few degrees of freedom or the sgt distribution. Finally if you want to tinker with the skewness and/or kurtosis of the distributions then use the sgt.
+
+The second part involves deciding how to the respective distribution parameters across the assets. For example do you want all assets to have the same mean and sd? or do you want them to have the same mean and different sd, or different means and sd ect.. This is up to the user and depends on the purpose of doing the Monte Carlo.
+
+I will demonstrate how to do this using _MC_market_
+
+For simplicity this example will use the normal distribution.
+
+
+```{r marginal dists}
+
+# Assigning mean = 10 and sd = 100 to all assets
+m1 <- sim_market(
+    corr_4,
+    k = 1000,
+    # selecting the pdf for the assets
+    marginal_dist = "norm",
+    # selecting parameters
+    marginal_dist_model = list(mu = -10, sd = 20)) # single arguments are assigned to all assets
+
+m1 %>% group_by(Asset) %>% 
+    mutate(mean = mean(Return), sd = sd(Return))
+
+
+# Assigning a mean of 1:50 and sd = 1:50 for assets 1:50
+m2 <- sim_market(
+    corr_4,
+    k = 1000,
+    # selecting the pdf for the assets
+    marginal_dist = "norm",
+    # selecting parameters
+    marginal_dist_model = list(mu = 1:50, sd = 1:50))  # mu/sd can take any vector of arguments
+
+m2 %>% group_by(Asset) %>% 
+    mutate(mean = mean(Return), sd = sd(Return))
+
+
+# same mean differnt sd?? 
+m3 <- sim_market(
+    corr_4,
+    k = 1000,
+    # selecting the pdf for the assets
+    marginal_dist = "norm",
+    # selecting parameters
+    marginal_dist_model = list(mu = 1, sd = 1:50))
+m3 %>% group_by(Asset) %>% 
+    mutate(mean = mean(Return), sd = sd(Return))
+
+
+```
+
+## Time-Series Properties
+
+The final step is to decide on how to assign time-series properties across the assets. _MCmarket_ has a function called _sim_garch_ that allows users to induce time series properties into a vector of random numbers by setting the parameters of a ARMA(1,1) + APARCH(1,1) model. The _sim_market_ function then utilises this function via is _ts_model_ argument. 
+
+This functionality allows one to create asset return series with highly persistent returns, leverage effects and various other GARCH characteristics. See ??MCmarket::sim_garch and ??fGarch::garchSpec for more information regarding the ARMA(1,1) + APARCH(1,1) parameters. 
+
+Note that when using the _ts_model_ argument, the means and sd in _marginal_dist_model_ should be left as 0 and 1 respectively. If not then the moments are set twice. 
+
+```{r}
+
+sim_market(corr_4,
+          500,
+          mv_dist = "t",
+          mv_df = 3,
+          
+          )
+
+```
+
+
+

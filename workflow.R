@@ -1,28 +1,32 @@
 #-------------------
 # MCmarket workflow
 #-------------------
-pacman::p_load(MCmarket, dplyr, purrr, ggcorrplot, ggplot2)
+pacman::p_load(MCmarket, tidyverse, ggcorrplot)
+
+
+#---------------------------------------------
+# The first step is to think about what kind of
+# market it is that you want to simulate. So lets
+# start with the correlation matrix
+#---------------------------------------------
+
 
 # First look at the diagonal correlation matrix
-
 corr_1 <- diag(50)
 corr_1 %>% ggcorrplot(hc.order = TRUE, title = "Diagonal Matrix")
 
 # Correlation matrix with no clusters
-
 corr_2 <- gen_corr(D = 50, clusters = "none")
 corr_2 %>% ggcorrplot(title = "No Clusters")
 0.9^(5-1)
 
 # Correlation matrix with 5 clusters
-
 corr_3 <- gen_corr(D = 50, clusters = "non-overlapping", num_clusters = 5)
 eigen_3 <- eigen(corr_3)
 corr_3 %>% ggcorrplot(hc.order = TRUE, title = "Five Clusters")
 
 
 # Correlation matrix with 10, 5 and 2 overlapping clusters
-
 corr_4 <- gen_corr(D = 50, clusters = "overlapping", num_clusters = c(10,5,2), num_layers = 3)
 eigen_4 <- eigen(corr_4)
 corr_4 %>% ggcorrplot(hc.order = TRUE, title = "Overlapping Clusters")

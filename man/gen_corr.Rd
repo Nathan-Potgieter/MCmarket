@@ -19,9 +19,9 @@ Available options are "none", for a correlation matrix with no clusters,
 "overlapping" for a correlation matrix with up to 4 layers and a set number
 of clusters per layer.}
 
-\item{num_clusters}{if clusters = "none" then num_clusters is not used.
+\item{num_clusters}{If clusters = "none" then num_clusters is not used.
 
-If clusters = "non-overlapping" then num_clusters is an integer of length one indicating the number of clusters.
+If clusters = "non-overlapping" then num_clusters is an integer indicating the number of clusters.
 
 If clusters = "overlapping" then num_clusters must be a vector of length less than or equal to 4. The length of
 num_clusters specifies the number of  cluster layers and the integers within the vector specify the number of clusters

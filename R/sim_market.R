@@ -46,6 +46,12 @@
 #'
 #' See the sim_garch function's documentation and the "model" parameter under fGarch::garchSpec() for more details
 #' regarding the parameters themselves.
+#' @param progress a logical value indicating if sim market should produce a progress bar when rerun/mapped. This
+#' is only intended to be used when using sim_market repeatedly.
+#'
+#'  Due to memory concerns it is suggested that users
+#' use map() over map_dfr() when simulating many markets. map_dfr() is useful when wanting to plot output with ggplot2.
+#' See examples.
 #'
 #' @return a tidy tibble containing a date, Asset and Return column.
 #'
@@ -62,9 +68,10 @@
 #' \dontrun{
 #'
 #' library(tidyverse)
+#' library(MCmarket)
 #'
 #' ### creating a correlation matrix of 50 assets to use as an input in sim_asset_market.
-#' corr <- gen_corr(N = 20, Clusters = "none")
+#' corr <- gen_corr(D = 20, clusters = "none")
 #'
 #' ### simulating 500 periods of returns across 50 assets.
 #' set.seed(12345)
@@ -79,8 +86,9 @@
 #'                                      beta = 0.899506,
 #'                                      ar = 0.063666,
 #'                                      ma = NULL,
-#'                                      gamma = 0.12194,
-#'                                      delta = 1.85))
+#'                                      gamma = 0.001,
+#'                                      delta = 1.85),
+#'                      progress = FALSE)
 #'
 #'  ### Visualising the market
 #'  market_data %>%
@@ -88,8 +96,37 @@
 #'  mutate(cum_ret = 100*cumprod(1 + Return)) %>%
 #'  ggplot() +
 #'  geom_line(aes(x = date, y = cum_ret, color = Asset)) +
-#'  facet_wrap(~Asset) +
+#'  facet_wrap(~Asset, scales = "free_y") +
 #'  theme(legend.position = "none")
+#'
+#' #==================================================
+#' # When performing Monte Carlo's with a Progress bar
+#' #==================================================
+#'
+#' ### For small N<1000, can use map_dfr for tidy output.
+#' N <- 50
+#' pb <- dplyr::progress_estimated(N) # Setting length of progress bar, Must be named pb.
+#' market <-
+#'       map_dfr(1:N,
+#'               ~sim_market(corr,
+#'                           marginal_dist = "norm",
+#'                           marginal_dist_model = list(mu = 0.02, sd = 0.5),
+#'                           progress = TRUE),
+#'               .id = "Universe") # adds an extra key/identification column.
+#'
+#' ### Visualizing the market
+#'  market %>% group_by(Asset, Universe) %>%
+#'  mutate(cum_ret = 100*cumprod(1 + Return)) %>%
+#'          ggplot() +
+#'          geom_line(aes(x = date, y = cum_ret, color = Universe)) +
+#          facet_wrap(~Asset, scales = "free_y") +
+#'         theme(legend.position = "none")
+#'
+#' ### For large N>1000, should rather use map for list output.
+#' N <- 1000
+#' pb <- dplyr::progress_estimated(N)   # this must be named pb
+#' market <- map(1:N,
+#'               ~sim_market(corr, progress = TRUE))
 #'
 #' }
 #' @export
@@ -101,7 +138,11 @@ sim_market <- function(corr,
                        clayton_param = 4,
                        marginal_dist = "norm",
                        marginal_dist_model = NULL,
-                       ts_model = NULL) {
+                       ts_model = NULL,
+                       progress = FALSE) {
+
+    if (progress==TRUE) pb$tick()$print()
+
     N <- nrow(corr)
     k <- k + 1   # extra room for sim_garch to as a lag.
     Cor <- P2p(corr)
