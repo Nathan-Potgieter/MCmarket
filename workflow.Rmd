@@ -7,6 +7,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Monte Carlo Framework
+The Monte Carlo simulation routine involves the following steps:
+
+This example generates k periods of returns, for D Assets across N markets.
+
+1. Draw a series of k random uniformly distributed numbers (corresponding to k trading periods), across a set of D variables (or D assets), from a multivariate distribution with a given correlation matrix. 
+    + MCmarket allows the use of the multivariate normal, t and Clayton distributions. 
+2. Convert the uniformly distributed data into something that resembles the distribution of asset returns. MCmarket provides functionality to convert them into normal, student-t or skewed-generalized t distributions. 
+    + This is done the same way one would convert p-values into test statistics using the dnorm(), dt() and dsgt() functions respectively.
+    + Technically this is accomplished via the inversion of the cumulative distribution function (CDF).
+3. This step induces mean and variance persistence to the series, by plugging the random numbers resulting from step 2 into a ARMA(1,1) + APARCH(1,1) equation as the innovations. 
+    + If the parameters are set accordingly the resulting series should possess the volatility clustering observed in empirical asset returns. 
+4. The final step is to repeat the first 3 steps N times to generate an ensemble of asset markets, each with the same risk characteristics. 
+
 ## Types of Markets
 
 The first step is to think about what kind of market it is that you want to simulate. So lets start with the looking at some correlation matrices. 
@@ -72,73 +86,86 @@ tibble(rally = eigen(corr_mats$cor_rally[[1]])$value,
 
 The 2nd step in deciding what kind of market to simulate is deciding on the multivariate distribution. _MCmarket_ provides functionality to select between the multivariate normal, t and Clayton copula distribution. However, note that when using the Clayton copula option the simulated markets no longer adhere to the input correlation matrix. 
 ```{r sim_market}
-# Lets just use the stressed emperical matrix for now on
-corr <- corr_mats$cor_stressed[[2]]
-
 # Using sim_market
 set.seed(123)
 market_norm <-
-    sim_market(corr_4,
-               k = 500,  # 500 periods
-               mv_dist = "norm",
-               marginal_dist_model = list(mu = 0.002, sd = 0.05)) # for simplicity
+    sim_market(
+        corr_4,
+        # 500 periods
+        k = 500,
+        mv_dist = "norm",
+        # arbitrary mean and sd
+        marginal_dist_model = list(mu = 0.002, sd = 0.05) 
+    ) 
 
 
 
 set.seed(123)
 market_t <-
-    sim_market(corr_4, 
-               k = 500,  # 500 periods
-               mv_dist = "t",
-               mv_df = 3,
-               marginal_dist_model = list(mu = 0.002, sd = 0.05))
+    sim_market(
+        corr_4,
+        k = 500,
+        # 500 periods
+        mv_dist = "t",
+        mv_df = 3,
+        marginal_dist_model = list(mu = 0.002, sd = 0.05)
+    )
 
 
 set.seed(123)
 market_clay <-
-    sim_market(corr_4, 
-               k = 500,  # 500 periods
-               mv_dist = "clayton",
-               clayton_param = 0.5,
-               marginal_dist_model = list(mu = 0.002, sd = 0.05))
+    sim_market(
+        corr_4,
+        k = 500,
+        # 500 periods
+        mv_dist = "clayton",
+        clayton_param = 0.5,
+        marginal_dist_model = list(mu = 0.002, sd = 0.05)
+    )
 
 # Plotting Correlation mats
-nc <- market_norm %>% 
-    spread(Asset, Return) %>% 
-    select(-date) %>% 
-    cor() %>% 
+nc <- market_norm %>%
+    spread(Asset, Return) %>%
+    select(-date) %>%
+    cor() %>%
     ggcorrplot(title = "norm", hc.order = TRUE) +
-    theme(legend.position = "none", 
-          axis.title.x=element_blank(),
+    theme(
+        legend.position = "none",
+        axis.title.x = element_blank(),
         axis.text.y = element_blank(),
-        axis.text.x=element_blank())
+        axis.text.x = element_blank()
+    )
 
-tc <- market_t %>% 
-    spread(Asset, Return) %>% 
-    select(-date) %>% 
-    cor() %>% 
+tc <- market_t %>%
+    spread(Asset, Return) %>%
+    select(-date) %>%
+    cor() %>%
     ggcorrplot(title = "t", hc.order = TRUE) +
-    theme(legend.position = "none", 
-          axis.title.x=element_blank(),
+    theme(
+        legend.position = "none",
+        axis.title.x = element_blank(),
         axis.text.y = element_blank(),
-        axis.text.x=element_blank())
+        axis.text.x = element_blank()
+    )
 
-cc <- market_clay %>% 
-    spread(Asset, Return) %>% 
-    select(-date) %>% 
-    cor() %>% 
+cc <- market_clay %>%
+    spread(Asset, Return) %>%
+    select(-date) %>%
+    cor() %>%
     ggcorrplot(title = "clayton", hc.order = TRUE) +
-    theme(legend.position = "none", 
-          axis.title.x=element_blank(),
+    theme(
+        legend.position = "none",
+        axis.title.x = element_blank(),
         axis.text.y = element_blank(),
-        axis.text.x=element_blank())
+        axis.text.x = element_blank()
+    )
 
 pacman::p_load(patchwork)
 nc / tc / cc
 
 
-# To see the difference in market dist lets see 
-# how an equal weighted portfolio does. 
+# To see the difference in market dist lets see
+# how an equal weighted portfolio does.
 pacman::p_load(rmsfuns, tbl2xts)
 
 weights <-
@@ -150,22 +177,24 @@ R_norm <- market_norm %>% spread(Asset, Return) %>% tbl_xts()
 R_t <- market_t %>% spread(Asset, Return) %>% tbl_xts()
 R_clay <- market_clay %>% spread(Asset, Return) %>% tbl_xts()
 
-return_norm <- Safe_Return.portfolio(R_norm, weights) %>% xts_tbl() %>%
-    mutate( norm = portfolio.returns) %>% select(-portfolio.returns)
+return_norm <-
+    Safe_Return.portfolio(R_norm, weights) %>% xts_tbl() %>%
+    mutate(norm = portfolio.returns) %>% select(-portfolio.returns)
 
-return_t <- Safe_Return.portfolio(R_t, weights) %>% xts_tbl() %>% 
+return_t <- Safe_Return.portfolio(R_t, weights) %>% xts_tbl() %>%
     mutate(t = portfolio.returns) %>% select(-portfolio.returns)
 
-return_clay <- Safe_Return.portfolio(R_clay, weights) %>% xts_tbl() %>% 
+return_clay <-
+    Safe_Return.portfolio(R_clay, weights) %>% xts_tbl() %>%
     mutate(clay = portfolio.returns) %>% select(-portfolio.returns)
 
 # Plotting and compairing cumuative returns over time
-left_join(return_norm, return_t) %>% left_join(return_clay) %>% 
-    gather(MV_Dist, Return, -date) %>% 
-    group_by(MV_Dist) %>% arrange(date) %>% 
-    mutate(cumulative_ret = cumprod(1+Return)*100) %>% 
-    ggplot(aes(x=date,y=cumulative_ret,color=MV_Dist)) + 
-    geom_line(size=0.7) + 
+left_join(return_norm, return_t) %>% left_join(return_clay) %>%
+    gather(MV_Dist, Return,-date) %>%
+    group_by(MV_Dist) %>% arrange(date) %>%
+    mutate(cumulative_ret = cumprod(1 + Return) * 100) %>%
+    ggplot(aes(x = date, y = cumulative_ret, color = MV_Dist)) +
+    geom_line(size = 0.7) +
     theme_bw()
 
 ```
@@ -192,9 +221,10 @@ m1 <- sim_market(
     # selecting the pdf for the assets
     marginal_dist = "norm",
     # selecting parameters
-    marginal_dist_model = list(mu = -10, sd = 20)) # single arguments are assigned to all assets
+    marginal_dist_model = list(mu = -10, sd = 20)
+) # single arguments are assigned to all assets
 
-m1 %>% group_by(Asset) %>% 
+m1 %>% group_by(Asset) %>%
     mutate(mean = mean(Return), sd = sd(Return))
 
 
@@ -205,21 +235,23 @@ m2 <- sim_market(
     # selecting the pdf for the assets
     marginal_dist = "norm",
     # selecting parameters
-    marginal_dist_model = list(mu = 1:50, sd = 1:50))  # mu/sd can take any vector of arguments
+    marginal_dist_model = list(mu = 1:50, sd = 1:50)
+)  # mu/sd can take any vector of arguments
 
-m2 %>% group_by(Asset) %>% 
+m2 %>% group_by(Asset) %>%
     mutate(mean = mean(Return), sd = sd(Return))
 
 
-# same mean differnt sd?? 
+# same mean differnt sd??
 m3 <- sim_market(
     corr_4,
     k = 1000,
     # selecting the pdf for the assets
     marginal_dist = "norm",
     # selecting parameters
-    marginal_dist_model = list(mu = 1, sd = 1:50))
-m3 %>% group_by(Asset) %>% 
+    marginal_dist_model = list(mu = 1, sd = 1:50)
+)
+m3 %>% group_by(Asset) %>%
     mutate(mean = mean(Return), sd = sd(Return))
 
 
@@ -227,22 +259,162 @@ m3 %>% group_by(Asset) %>%
 
 ## Time-Series Properties
 
-The final step is to decide on how to assign time-series properties across the assets. _MCmarket_ has a function called _sim_garch_ that allows users to induce time series properties into a vector of random numbers by setting the parameters of a ARMA(1,1) + APARCH(1,1) model. The _sim_market_ function then utilises this function via is _ts_model_ argument. 
+The final step is to decide on how to assign time-series properties across the assets. Should each have the same time-series properties or should they all be set separately?
+
+_MCmarket_ has a function called _sim_garch_ that allows users to induce time series properties into a vector of random numbers by setting the parameters of a ARMA(1,1) + APARCH(1,1) model. The _sim_market_ function then utilises this function via is _ts_model_ argument. 
 
 This functionality allows one to create asset return series with highly persistent returns, leverage effects and various other GARCH characteristics. See ??MCmarket::sim_garch and ??fGarch::garchSpec for more information regarding the ARMA(1,1) + APARCH(1,1) parameters. 
+
 
 Note that when using the _ts_model_ argument, the means and sd in _marginal_dist_model_ should be left as 0 and 1 respectively. If not then the moments are set twice. 
 
 ```{r}
+# using the diagonal correlation matrix
+corr <- diag(50)
 
-sim_market(corr_4,
-          500,
-          mv_dist = "t",
-          mv_df = 3,
-          
-          )
+set.seed(1234)
+m1 <-
+    sim_market(
+        corr = corr,
+        k = 500,
+        mv_dist = "t",
+        mv_df = 3,
+        marginal_dist = "t",
+        # same non centrality parameter (ncp) and df for each asset
+        marginal_dist_model = list(ncp = 0, df = 20),
+        # same ts_model for each asset
+        ts_model = list(
+            # mean periodic return
+            mu = 0.00002,
+            # key unconditional volatility parameter
+            omega = 0.00002,
+            # ARCH effect
+            alpha = 0.098839,
+            # volatility persistence
+            beta = 0.9,
+            # autoregressive from ARMA
+            ar = 0.063666,
+            # moving average from ARMA
+            ma = NULL,
+            # APARCH leverage parameter
+            gamma = 0.00001,
+            # APARCH parameter
+            delta = 1.85
+        )
+    )
+set.seed(1234)
+m2 <-
+    sim_market(
+        corr = corr,
+        k = 500,
+        mv_dist = "t",
+        mv_df = 3,
+        marginal_dist = "t",
+        # same non centrality parameter (ncp) and df for each asset
+        marginal_dist_model = list(ncp = 0, df = 20),
+        # different ts model for each asset. at least for beta
+        ts_model = list(
+            # mean periodic return
+            mu = 0.00002,
+            # key unconditional volatility parameter
+            omega = 0.00002,
+            # ARCH effect
+            alpha = 0.098839,
+            # volatility persistence
+            beta = seq(0, 0.99, length.out = 50),
+            # autoregressive from ARMA
+            ar = 0.063666,
+            # moving average from ARMA
+            ma = NULL,
+            # APARCH leverage parameter
+            gamma = 0.00001,
+            # APARCH parameter
+            delta = 1.85
+        )
+    )
+
+m1 %>% ggplot(aes(x = date, y = Return, color = Asset)) +
+    geom_line(alpha = 0.4) + theme_bw() +
+    theme(legend.position = "none") +
+    labs(title = "same ts_model")
+
+m2 %>% ggplot(aes(x = date, y = Return, color = Asset)) +
+    geom_line(alpha = 0.4) + theme_bw() +
+    theme(legend.position = "none") +
+    labs(title = "beta 0:0.99")
 
 ```
+
+# Monte Carlo
+
+The user has settled on the risk characteristics of the market they wish to simulate they can perform the Monte Carlo simulations. _MCmarket_ provides a _mc_market_ function to aid users who are not comfortable using the map function perform Monte Carlo simulations. However, it is recomended that users do so by hand as they can then use sim_markets progress bar functionality. 
+
+```{r}
+# First using mc_market| Note smaller dimentions and N are used for plotting convenience
+set.seed(123)
+mc1 <- mc_market(
+    corr = diag(20),
+    # Number of markets to simulate
+    N = 20,
+    k = 300,
+    marginal_dist = "sgt",
+    marginal_dist_model = list(
+        mu = 0.01,
+        sd = 0.1,
+        # skewness parameter
+        lambda = -0.2,
+        # kurtosis parameter 1
+        p = 2,
+        # kurtosis parameter 2
+        q = Inf
+    ),
+    # list = True for a list of dataframes and list = FALSE for one long dataframe
+    list = FALSE # Only use list = FALSE for small N
+)
+
+# When the output is long it is easy to plot
+mc1 %>%
+    group_by(Asset, Universe) %>%
+    mutate(clumulative_ret = cumprod(1 + Return) * 100) %>%
+    ggplot(aes(x = date, y = clumulative_ret, color = Universe)) +
+    geom_line() +
+    facet_wrap( ~ Asset) +
+    theme_bw() + 
+    theme(legend.position = "none")
+
+```
+
+```{r eval=FALSE, include=TRUE}
+# For large Monte Carlos map by hand with a progress bar.
+pacman::p_load(MCmarket, purrr)
+N <- 1000
+pb <- dplyr::progress_estimated(N)   # this must be named pb
+
+# For large N use map>map_dfr
+mc2 <- map(
+    1:N,
+    ~ sim_market(
+        corr_4,
+        k = 300,
+        mv_dist = "t",
+        mv_df = 2.5,
+        marginal_dist = "sgt",
+        marginal_dist_model = list(
+            mu = 0.01,
+            sd = 0.1,
+            # skewness parameter
+            lambda = -0.2,
+            # kurtosis parameter 1
+            p = 2,
+            # kurtosis parameter 2
+            q = Inf
+        ),
+        progress = TRUE
+    )
+)
+
+```
+
 
 
 
