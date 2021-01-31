@@ -11,29 +11,35 @@ gen_corr(
 )
 }
 \arguments{
-\item{D}{The number of variables, generates an D by D correlation matrix.}
+\item{D}{The number of variables, the output is a D by D correlation matrix.}
 
 \item{clusters}{a character string specifying the type of cluster structure.
-Available options are "none", for a correlation matrix with no clusters,
-"non-overlapping" for a correlation matrix with one layer of clusters, and
+Available options are;
+
+"none", for a correlation matrix with significant correlations, but no clusters.
+
+"non-overlapping" for a correlation matrix with one layer of clusters.
+
 "overlapping" for a correlation matrix with up to 4 layers and a set number
 of clusters per layer.}
 
-\item{num_clusters}{If clusters = "none" then num_clusters is not used.
+\item{num_clusters}{If clusters = "none" num_clusters is not used.
 
 If clusters = "non-overlapping" then num_clusters is an integer indicating the number of clusters.
 
-If clusters = "overlapping" then num_clusters must be a vector of length less than or equal to 4. The length of
+If clusters = "overlapping" then num_clusters is a vector of length less than or equal to 4. The length of
 num_clusters specifies the number of  cluster layers and the integers within the vector specify the number of clusters
 per layer. It is preferable to arranged the vector in descending order, but failing to do so can result in
-unique output but may not contain the intended number of layers.}
+unique output, which may not contain the intended number of layers. Additionally, using combinations with repeating
+number of clusters, like for example num_clusters = C(10, 10, 5, 5)) will produce fewer layers, but unique intra cluster
+correlations (See examples).}
 }
 \value{
-this function returns a D by D correlation matrix.
+returns a D by D correlation matrix.
 }
 \description{
-This function allows users to easily generate ad hoc correlation
-matrices with a set number of clusters and up to 4 layers.
+This function allows users to easily generate a user defined ad hoc correlation
+matrix with up to 4 layers of clusters.
 }
 \examples{
 \dontrun{

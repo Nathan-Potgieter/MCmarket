@@ -7,6 +7,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+This document walks through the typical workflow, and highlights some key considerations, when performing the Monte Carlo simulation of financial asset markets.  
+
 ## Monte Carlo Framework
 The Monte Carlo simulation routine involves the following steps:
 
@@ -23,10 +25,11 @@ This example generates k periods of returns, for D Assets across N markets.
 
 ## Types of Markets
 
-The first step is to think about what kind of market it is that you want to simulate. So lets start with the looking at some correlation matrices. 
+Before performing any simulations one must first think about what kind of market it is that they want to simulate. This depends on the purpose for carrrying out Monte Carlo simulations. Since the correlation matrix is the key input when simulating markets in MCmarket, lets start by looking as some. Users can estimate their own correlation matrices with real world date, or create _ad hoc_ matrices to simulate markets with specific dependence structures.
 
 ### ad hoc/ constructed correlation matricies
-- The function _gen_corr_ allows users to easily generate ad hoc correlation matrices with a set number of clusters and up to 4 layers.
+
+- The function _gen_corr_ allows users to easily generate _ad hoc_ correlation matrices with a set number of clusters and up to 4 layers.
 
 ```{r corr mats}
 pacman::p_load(MCmarket, tidyverse, ggcorrplot)
@@ -55,9 +58,9 @@ tibble(diag = eigen(corr_1)$value, no_clust = eigen(corr_2)$value, five_clust = 
 
 ### Emperical
 
-If the _ad hoc_ matrices don't seem realistic enough then one can use empirical data to estimate a correlation matrix of their own. 
+If the _ad hoc_ matrices don't seem realistic enough, or the exact correlation structure is not of particular interest, then one can use empirical data to estimate a correlation matrix of their own. Alternatively, _MCmarket_ comes with a data set of 30 correlation matrices that were each estimated from a random subset of 50 S&P500 stocks over a random time slice of 252 days between 1 January 2000 and 1 January 2020. 
 
-_MCmarket_ also comes with a data set of 30 correlation matrices that were each estimated from a random subset of 50 S&P500 stocks over a random time slice of 252 days between 1 January 2000 and 1 January 2020. These correlation matrices are labeled  as ‘stressed’ if they were estimated on a market where an equi-weighted basket of stocks had a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe ratio above 2 and ‘normal’ if the equi-weighted basket of stocks had a Sharpe in-between -0.5 and 2. See _MCmarket::corr_mats_
+These correlation matrices are labeled  as ‘stressed’ if they were estimated on a market where an equi-weighted basket of stocks had a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe ratio above 2 and ‘normal’ if the equi-weighted basket of stocks had a Sharpe in-between -0.5 and 2. See _MCmarket::corr_mats_
 
 ```{r emperical corr}
 corr_mats$cor_rally[[1]] %>% ggcorrplot(title = "Rally", hc.order = TRUE) +
@@ -135,6 +138,7 @@ nc <- market_norm %>%
         axis.text.y = element_blank(),
         axis.text.x = element_blank()
     )
+nc
 
 tc <- market_t %>%
     spread(Asset, Return) %>%
@@ -147,6 +151,7 @@ tc <- market_t %>%
         axis.text.y = element_blank(),
         axis.text.x = element_blank()
     )
+tc
 
 cc <- market_clay %>%
     spread(Asset, Return) %>%
@@ -159,9 +164,8 @@ cc <- market_clay %>%
         axis.text.y = element_blank(),
         axis.text.x = element_blank()
     )
+cc
 
-pacman::p_load(patchwork)
-nc / tc / cc
 
 
 # To see the difference in market dist lets see

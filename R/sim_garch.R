@@ -5,7 +5,7 @@
 #' ARIMA + GARCH process.
 #' @param omega a positive value defining the coefficient of the variance equation, default is 5e-04.
 #' @param gamma a value defining the APARCH leverage parameter in the variance equation. The default
-#' of 0, implies no leverage effect and therefore corresponds with the standard GARCH model.
+#' of 0, implies no leverage effect and therefore. corresponds to the standard GARCH model.
 #' @param alpha a value defining the value of the autoregressive variance coefficient, default is 0.
 #' @param beta a value defining the variance coefficient, default is 0.
 #' @param mu  a value defining the mean, default is 0.
@@ -17,15 +17,17 @@
 #' resulting ARIMA + GARCH series, or if FALSE a three column dataframe containing z - the innovations, h - the
 #'  conditional variance and y - ARMA + APARCH series.
 #' @note  (1) It is suggested that the randomly distributed numbers be mean zero and standard
-#' deviation one, as these attributes can be set by the model argument.
+#' deviation one, as these attributes can be set within sim_garch.
 #'
 #' (2) For more information on the ARMA + APARCH parameters see:
 #'
-#' Ruppert, D. and Matteson, D.S., 2011. Statistics and data analysis for financial engineering (Vol. 13). New York: Springer.
+#' Ruppert, D. and Matteson, D.S., 2011. Statistics and data analysis for financial engineering (Vol. 13).
+#' New York: Springer.
 #'
-#'  @return if simple = TRUE a vector of the resulting ARMA + APARCH series, else if simple = FALSE a
-#' three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA +
-#' APARCH series. Note the length of the resulting series will one observation less than that that of the innovations
+#'  @return if simple = TRUE a vector of the resulting ARMA + APARCH series.
+#'
+#' If simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA +
+#' APARCH series. Note the length of the resulting series will be one observation less than that that of the innovations
 #' as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
 #'
 #' @importFrom dplyr tibble

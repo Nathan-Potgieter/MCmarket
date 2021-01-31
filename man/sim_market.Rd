@@ -9,7 +9,7 @@ sim_market(
   k = 252,
   mv_dist = "t",
   mv_df = 3,
-  clayton_param = 4,
+  clayton_param = 1,
   marginal_dist = "norm",
   marginal_dist_model = NULL,
   ts_model = NULL,
@@ -18,24 +18,28 @@ sim_market(
 }
 \arguments{
 \item{corr}{a correlation matrix specifying the correlation structure of the simulated data. The number
-of variables simulated is equal to the number of columns/rows in the correlation matrix. When using
-mv_dist = "clayton" only the dimensions of the correlation matrix and hence correlations will not adhere to
-the inputted corr matrix.}
+of variables simulated is equal to the number of columns/rows. When using mv_dist = "clayton" then simulated
+returns do not adhere to this correlation matrix.}
 
 \item{k}{a positive integer indicating the number of time periods to simulate.}
 
-\item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton")
-which correspond to the multivariate normal, t and Clayton distribution respectively.}
+\item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton"), these
+correspond to the respective multivariate normal, t and Clayton distributions. This will effect how the
+returns are cross-sectionally distributed. When using mv_dist = "clayton" assets will exhibit high left-tail dependence,
+but will not adhere to the user specified correlation matrix corr matrix.}
 
-\item{mv_df}{degrees of freedom of the multivariate t distribution, only used when mv_dist = "t". Default is 3.}
+\item{mv_df}{degrees of freedom of the multivariate t distribution (> 0, maybe non-integer). The default is 4 and is only
+needed when mv_dist = "t".}
 
-\item{clayton_param}{a positive value indicating the Clayton copula's parameter. Default is 4.}
+\item{clayton_param}{a value (> 0, maybe non-integer) indicating the parameter of the Clayton copula.
 
-\item{marginal_dist}{a string variable specifying the univariate distribution of the asset return series. Can
-be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t
-distributions respectively. Default is "norm".}
+The default is 1 and is only needed when mv_dist = "clayton".}
 
-\item{marginal_dist_model}{list containing the relevant parameters for the chosen marginal_dist.
+\item{marginal_dist}{a string variable specifying the univariate distribution of the asset return series. This can
+be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t distributions respectively.
+Default is "norm".}
+
+\item{marginal_dist_model}{list containing the relevant parameters for the chosen _marginal_dist_ model.
 
 marginal_dist = "norm" accepts the mean (mu) and standard deviation (sd) arguments with their respective
 defaults set to list(mu = 0, sd = 1).
@@ -45,44 +49,42 @@ default values are list(ncp = 0, df = 5).
 
 marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters
 list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
-by the user. For more information see the documentation on the qsgt function from the sgt pacakge.}
+by the user. For more information on the parameters see ?sgt::sgt.}
 
-\item{ts_model}{a list containing various ARMA + APGARCH model parameters allowing one to specify
+\item{ts_model}{a list containing various ARMA + APGARCH model parameters. These parameters specify
 the time series properties of the simulated returns. Note that parameter combinations resulting
 in non-stationary of the mean or variance will produce NAN's and that the maximum lag allowed for
 any given parameter is 1.
 
-The default is ts_model = NULL, in which case time series time series properties are not induced, however if
+The default is ts_model = NULL, in which case the time-series properties are not induced, however, if
 ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0,
 ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset simply insert a vector
 of length equal to the number of assets, the first element of the vector will correspond to Asset_1, the 2nd
 to Asset_2 ect...
 
-See the sim_garch function's documentation and the "model" parameter under fGarch::garchSpec() for more details
-regarding the parameters themselves.}
+For more details on the ARMA + APGARCH, see the ?sim_garch and the "model" parameter in ?fGarch::garchSpec.}
 
-\item{progress}{a logical value indicating if sim market should produce a progress bar when rerun/mapped. This
-is only intended to be used when using sim_market repeatedly. Due to memory concerns it is suggested that users
-use map() over map_dfr() when simulating many markets. map_dfr() is useful when wanting to plot output with ggplot2.
-See examples.}
+\item{progress}{a logical value indicating if sim market should produce a progress bar when iterated over. See
+examples on how to use correctly.
+
+When simulating many markets, due to memory concerns, it is suggested that users use map() over map_dfr().
+map_dfr() produces a long/tidy data set and is therefore, useful when wanting to produce a plot with ggplot2.}
 }
 \value{
 a tidy tibble containing a date, Asset and Return column.
 }
 \description{
-This function produces a series of returns for an asset market with a
-given covariance structure. The user can choose between the multivariate t and normal
-distributions. Alternatively, if the user wants the market to exhibit extreme left tail dependence then
-also select the multivariate distribution described by the Clayton copula, however, if they
-choose to do so the will loose the ability to to specify the markets pairwise correlation structure.
-The univariate asset return distributions can be set to normal, student-t or sgt
-distributions and mean and variance persistence, in the time-series dimension, can be induced via
-the parameters of an ARMA + APARCH model.
+This function simulates a series of returns for an asset market with a wide range of
+user specified cross-section and time-series risk-return properties.
 }
 \note{
-It is suggested that, if the ts_model argument is used, then the marginal distributions be left
-as list(mu = 0, sd = 1). These attributes are better off being set in the ts_model argument by the
-mu and omega parameters respectively.
+It is suggested that, if the ts_model argument is used,
+
+then the marginal distributions be left as list(mu = 0, sd = 1) for marginal_dist = "norm" or "sgt",
+and list(ncp = 0) for marginal_dist = "t".
+
+If this is not done, a warning message will appear. These attributes are better off being set in the
+ts_model argument, see the mu and omega parameters.
 }
 \examples{
 
@@ -91,6 +93,9 @@ mu and omega parameters respectively.
 library(tidyverse)
 library(MCmarket)
 
+#=============================
+# Simulating a single market
+#=============================
 ### creating a correlation matrix of 50 assets to use as an input in sim_asset_market.
 corr <- gen_corr(D = 20, clusters = "none")
 
@@ -121,10 +126,10 @@ market_data <-
  theme(legend.position = "none")
 
 #==================================================
-# When performing Monte Carlo's with a Progress bar
+# Performing Monte Carlo's with a Progress bar
 #==================================================
 
-### For small N<1000, can use map_dfr for tidy output.
+### For small N<500, can use map_dfr for tidy output.
 N <- 50
 pb <- dplyr::progress_estimated(N) # Setting length of progress bar, Must be named pb.
 market <-
@@ -142,7 +147,7 @@ market <-
          geom_line(aes(x = date, y = cum_ret, color = Universe)) +
         theme(legend.position = "none")
 
-### For large N>1000, should rather use map for list output.
+### For large N>500, should rather use map for list output.
 N <- 1000
 pb <- dplyr::progress_estimated(N)   # this must be named pb
 market <- map(1:N,

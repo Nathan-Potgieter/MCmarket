@@ -31,18 +31,32 @@ corr_4 <- gen_corr(D = 50, clusters = "overlapping", num_clusters = c(10,5,2), n
 eigen_4 <- eigen(corr_4)
 corr_4 %>% ggcorrplot(hc.order = TRUE, title = "Overlapping Clusters")
 
+# An empirical rally correlation matrix
+corr_5 <- corr_mats$cor_rally[[1]]
+eigen_5 <- eigen(corr_5)
+corr_5 %>% ggcorrplot(hc.order = TRUE, title = "Overlapping Clusters")
 
-#-----------------
-# Using sim_market
-#-----------------
+#===========
+# sim_market
+#===========
+#----------------------------------------------------------
+# Market 1:
+# Using sim_market to simulate a single market with
+# the empirical rally correlation matrix and the same
+# ar + garch model with drift and normally distributed innovations
+# for each asset.
+#---------------------------------------------------------
 set.seed(12345)
-market <- sim_market(cor,
-                      k = 500,
-                      mv_dist = "norm",
-                      left_cop_weight = 0.25,
-                      left_cop_param = 5,
-                      ts_model = list(mu = 0.0005, alpha = 0.99,
-                                      gamma = 0.5, delta = 1.98))
+market <- sim_market(
+    corr_5, # empirical rally correlation matrix
+    k = 500,
+    mv_dist = "norm", # normal innovations
+    ts_model = list(mu = 0.0015, # Drift term
+                    alpha = 0.5,
+                    beta = 0.1,
+                    ar = 0.1)
+)
+# plotting output
 market %>%
     arrange(date) %>%
     group_by(Asset) %>%
@@ -50,35 +64,72 @@ market %>%
     ungroup() %>%
     ggplot(aes(date, cum_ret, color = Asset)) +
     geom_line() +
-    facet_wrap(~Asset, scales = "free_y") +
     theme_bw() +
-    theme(legend.position = "none")
-
-#-----------------
-# Using mc_market
-#-----------------
+    theme(legend.position = "none") +
+    labs(title = "Market 1",
+         y = "log(Cumulative Return)") +
+    scale_y_log10()
+#-----------------------------------------------------------------
+# Market 2:
+# Using sim_market to simulate a single market with
+# the empirical rally correlation matrix, a multivariate t distribution
+# with 10 degrees of freedom, a different ar + garch model and t distributed
+# innovations with 4 degrees of freedom.
+#-----------------------------------------------------------------
 set.seed(12345)
-MCmarkets <-
-    mc_market(corr = diag(20),
-              N = 5,
-              k = 500,
-              mv_dist = "norm",
-              left_cop_weight = 0.25,
-              marginal_dist = "norm",
-              ts_model = list(mu = 0.0005,
-                              ar = 0.0005,
-                              alpha = 0.99,
-                              gamma = 0.0002,
-                              delta = 1.98))
-MCmarkets %>%
+market2 <- sim_market(
+    corr_5,# empirical rally correlation matrix
+    k = 500,
+    mv_dist = "t",# t innovations
+    mv_df = 10, # multivariate degrees of freedom
+    marginal_dist = "t",
+    marginal_dist_model = list(ncp = 0, df = 4), # innovation 4 degrees of freedom
+        ts_model = list( # Note how ts parameters parameters are set randomly
+            mu = runif(50, 0.001, 0.0025),
+            alpha = runif(50, 0, 0.1),
+            beta = runif(50, 0, 0.1),
+            ar = runif(50, 0, 0.01)
+        )
+)
+# plotting output
+market2 %>%
+    arrange(date) %>%
+    group_by(Asset) %>%
+    mutate(cum_ret = cumprod(1 + Return)*100) %>%
+    ungroup() %>%
+    ggplot(aes(date, cum_ret, color = Asset)) +
+    geom_line() +
+    theme_bw() +
+    theme(legend.position = "none") +
+    labs(title = "Market 2",
+         y = "log(Cumulative Return)") +
+    scale_y_log10()
+
+#==================
+# Using mc_market
+#==================
+# Simulating Market 1 20 times.
+set.seed(12345)
+MCmarket1 <- mc_market(
+    N = 20, # Number of simulations
+    corr_5, # empirical rally correlation matrix
+    k = 500,
+    mv_dist = "norm", # normal innovations
+    ts_model = list(mu = 0.0015, # Drift term
+                    alpha = 0.5,
+                    beta = 0.1,
+                    ar = 0.1),
+    list = FALSE   # Using list = FALSE for easy plotting
+)
+MCmarket1 %>%
     group_by(Asset, Universe) %>%
     arrange(date) %>%
     mutate(cum_ret = cumprod(1 + Return)*100) %>%
     ggplot() +
-    geom_line(aes(x = date, y = cum_ret, color = Universe), size = 1, alpha = 0.5) +
-    facet_wrap(~Asset, scales = "free_y") +
+    geom_line(aes(x = date, y = cum_ret, color = Asset), size = 0.5, alpha = 0.5) +
+    facet_wrap(~Universe, scales = "free_y") +
     labs(title = "Ensemble of Cumulative Returns",
-         subtitle = "100 Realizations for a Market of 20 Assets") +
+         subtitle = "20 Realizations for a Market 1") +
     theme_bw()+
     theme(legend.position = "none")
 
