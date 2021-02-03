@@ -1,34 +1,34 @@
 #' @title sim_garch
 #' @description This function takes a vector of random numbers, referred to as innovations, and
 #' induces mean and variance persistence by inserting them into an ARMA(1,1) + APARCH(1,1) model.
-#' @param innovations a vector containing the random numbers/ the innovations of the
+#' @param innovations a vector containing the random numbers or the innovations of the
 #' ARIMA + GARCH process.
-#' @param omega a positive value defining the coefficient of the variance equation, default is 5e-04.
+#' @param omega a positive value defining the coefficient of the variance equation. The default is 5e-04.
 #' @param gamma a value defining the APARCH leverage parameter in the variance equation. The default
-#' of 0, implies no leverage effect and therefore. corresponds to the standard GARCH model.
-#' @param alpha a value defining the value of the autoregressive variance coefficient, default is 0.
-#' @param beta a value defining the variance coefficient, default is 0.
-#' @param mu  a value defining the mean, default is 0.
-#' @param ar  a value defining the autoregressive ARMA coefficient, default is 0.
-#' @param ma a value defining the moving average ARMA coefficient, default is 0.
-#' @param delta a strictly positive value the delta parameter of the APARCH model. The default is 2,
-#' which corresponds with the standard GARCH model.
+#' of 0 implies no leverage effect and therefore, corresponds to the standard GARCH model.
+#' @param alpha a value defining the autoregressive variance coefficient. The default is 0.
+#' @param beta a value defining the variance coefficient. The default is 0.
+#' @param mu  a value defining the mean. The default is 0.
+#' @param ar  a value defining the autoregressive ARMA coefficient. The default is 0.
+#' @param ma a value defining the moving average ARMA coefficient. The default is 0.
+#' @param delta a strictly positive value defining the delta parameter of the APARCH model. The default is 2,
+#' which corresponds to the standard GARCH model.
 #' @param simple a logical parameter indicating if the output should be a simple vector containing just the
 #' resulting ARIMA + GARCH series, or if FALSE a three column dataframe containing z - the innovations, h - the
 #'  conditional variance and y - ARMA + APARCH series.
-#' @note  (1) It is suggested that the randomly distributed numbers be mean zero and standard
-#' deviation one, as these attributes can be set within sim_garch.
+#'
+#' @return if simple = TRUE a vector of the resulting ARMA + APARCH series.
+#'
+#' If simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA +
+#' APARCH series. Note the length of the resulting series will be one observation less than that of the innovations.
+#' The ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
+#' @note  (1) It is suggested that the randomly distributed numbers have a mean of zero and standard
+#' deviation of one, as these attributes can be set within sim_garch.
 #'
 #' (2) For more information on the ARMA + APARCH parameters see:
 #'
 #' Ruppert, D. and Matteson, D.S., 2011. Statistics and data analysis for financial engineering (Vol. 13).
 #' New York: Springer.
-#'
-#'  @return if simple = TRUE a vector of the resulting ARMA + APARCH series.
-#'
-#' If simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA +
-#' APARCH series. Note the length of the resulting series will be one observation less than that that of the innovations
-#' as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
 #'
 #' @importFrom dplyr tibble
 #'

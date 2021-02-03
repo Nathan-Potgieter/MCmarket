@@ -7,29 +7,28 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This document walks through the typical workflow, and highlights some key considerations, when performing the Monte Carlo simulation of financial asset markets.  
+This document discusses the typical workflow and highlights some key considerations when performing Monte Carlo simulations of financial asset markets using MCmarket.  
 
 ## Monte Carlo Framework
-The Monte Carlo simulation routine involves the following steps:
+The Monte Carlo simulation routine built into MCmarket involves the following steps:
 
-This example generates k periods of returns, for D Assets across N markets.
+This example generates k periods of returns for D Assets across N counter-factual markets.
 
-1. Draw a series of k random uniformly distributed numbers (corresponding to k trading periods), across a set of D variables (or D assets), from a multivariate distribution with a given correlation matrix. 
-    + MCmarket allows the use of the multivariate normal, t and Clayton distributions. 
-2. Convert the uniformly distributed data into something that resembles the distribution of asset returns. MCmarket provides functionality to convert them into normal, student-t or skewed-generalized t distributions. 
-    + This is done the same way one would convert p-values into test statistics using the dnorm(), dt() and dsgt() functions respectively.
-    + Technically this is accomplished via the inversion of the cumulative distribution function (CDF).
-3. This step induces mean and variance persistence to the series, by plugging the random numbers resulting from step 2 into a ARMA(1,1) + APARCH(1,1) equation as the innovations. 
-    + If the parameters are set accordingly the resulting series should possess the volatility clustering observed in empirical asset returns. 
-4. The final step is to repeat the first 3 steps N times to generate an ensemble of asset markets, each with the same risk characteristics. 
-
+1. Draw a series of k random, uniformly distributed numbers (corresponding to k trading periods), across a set of D variables (or D assets) from a multivariate Gaussian, t or Clayton copula.  
+    + The Gaussian and t-copulas can be specified with a correlation matrix and the Archmediean Clayton copula can be used to induce left-tail dependence. This is easily accomplished using R's _copula_ package [@copula]. 
+2. Convert the univariate distributions from uniform into something that more resembles the distribution of asset returns. For example, one could convert them into normal, student-t or skewed-generalized t distributions. 
+    + Practically, this is done the same way one would convert p-values into test statistics using the dnorm(), dt() and dsgt() functions respectively [@wang2012; @sgt].
+    + Technically, this is accomplished via the inversion of the chosen cumulative distribution function (CDF).
+3. Induce mean and variance persistence to the series by plugging the results from step 2 into an ARMA(p,q) + GARCH(q,p) equation as the i.i.d innovations.
+    + If the parameters are set accordingly, the resulting series will closely resemble real world return data. 
+4. Repeat the first 3 steps N times to generate an ensemble of asset markets, each with the same risk characteristics but different realizations.
 ## Types of Markets
 
-Before performing any simulations one must first think about what kind of market it is that they want to simulate. This depends on the purpose for carrrying out Monte Carlo simulations. Since the correlation matrix is the key input when simulating markets in MCmarket, lets start by looking as some. Users can estimate their own correlation matrices with real world date, or create _ad hoc_ matrices to simulate markets with specific dependence structures.
+Before performing any simulations, one must first consider the type of market that they want to simulate. This involves deciding on how to set the market's covariance matrix, choosing what multivariate distribution to use, how to set asset return distributions and their time-series properties. Since the correlation matrix is the key input when simulating markets in MCmarket, lets start by looking at some. Users can estimate their own correlation matrices with real world data, or create _ad hoc_ matrices to simulate markets with specific dependence structures.
 
 ### ad hoc/ constructed correlation matricies
 
-- The function _gen_corr_ allows users to easily generate _ad hoc_ correlation matrices with a set number of clusters and up to 4 layers.
+- The function _gen_corr_ allows users to easily generate _ad hoc_ correlation matrices with a set number of clusters and up to four layers.
 
 ```{r corr mats}
 pacman::p_load(MCmarket, tidyverse, ggcorrplot)
@@ -58,9 +57,9 @@ tibble(diag = eigen(corr_1)$value, no_clust = eigen(corr_2)$value, five_clust = 
 
 ### Emperical
 
-If the _ad hoc_ matrices don't seem realistic enough, or the exact correlation structure is not of particular interest, then one can use empirical data to estimate a correlation matrix of their own. Alternatively, _MCmarket_ comes with a data set of 30 correlation matrices that were each estimated from a random subset of 50 S&P500 stocks over a random time slice of 252 days between 1 January 2000 and 1 January 2020. 
+If the _ad hoc_ matrices do not seem realistic enough, or the exact correlation structure is not of particular interest, then one can use empirical data to estimate a correlation matrix of their own. Alternatively, _MCmarket_ comes with a data set of 30 correlation matrices that were each estimated from a random subset of 50 S&P500 stocks over a random time slice of 252 days between 1 January 2000 and 1 January 2020. 
 
-These correlation matrices are labeled  as ‘stressed’ if they were estimated on a market where an equi-weighted basket of stocks had a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks had a Sharpe ratio above 2 and ‘normal’ if the equi-weighted basket of stocks had a Sharpe in-between -0.5 and 2. See _MCmarket::corr_mats_
+These correlation matrices are labeled  as ‘stressed’ if they were estimated on a market where an equi-weighted basket of stocks has a Sharpe ratio below -0.5, ‘rally’ if the equi-weighted basket of stocks has a Sharpe ratio above 2 and ‘normal’ if the equi-weighted basket of stocks has a Sharpe in-between -0.5 and 2. See _MCmarket::corr_mats_.
 
 ```{r emperical corr}
 corr_mats$cor_rally[[1]] %>% ggcorrplot(title = "Rally", hc.order = TRUE) +
@@ -87,7 +86,8 @@ tibble(rally = eigen(corr_mats$cor_rally[[1]])$value,
 
 ## Multivariate Distributions
 
-The 2nd step in deciding what kind of market to simulate is deciding on the multivariate distribution. _MCmarket_ provides functionality to select between the multivariate normal, t and Clayton copula distribution. However, note that when using the Clayton copula option the simulated markets no longer adhere to the input correlation matrix. 
+The 2nd step in deciding what kind of market to simulate is selecting the market's multivariate distribution. _MCmarket_ provides functionality to select between the multivariate normal, t and Clayton copula distribution. The multivariate normal distribution has thin tails and therefore, creates relatively low risk markets, where joint drawdowns are not significantly consequential. The multivariate t distribution has a degrees of freedom parameter that can be adjusted to effect market risk. High degrees of freedom will create markets similar to that of the normal distribution, while low degrees of freedom values will produce markets with fatter tails, this can make joint drawdowns more consequential. The Clayton distribution will produce markets with left-tailed dependence, where asset correlations increase during market drawdowns. The Clayton copula also has a parameter that can be adjusted to effect the degree of left tail dependence. However, when using the Clayton copula option, the simulated markets no longer adhere to the input correlation matrix.
+
 ```{r sim_market}
 # Using sim_market
 set.seed(123)
@@ -205,28 +205,28 @@ left_join(return_norm, return_t) %>% left_join(return_clay) %>%
 
 ## Univariate/Marginal Distributions
 
-The next step is to decide on the return distributions of the individual assets. _MCmarket_ allows one to select between the normal, t and skewed generalized t (sgt) distribution. Where the sgt is the most general and thereby nests nests a number of alternative distributions. 
+The next step is to decide on the the individual assets return distributions. _MCmarket_ allows one to select between the normal, t and skewed generalized t (sgt) distributions. The sgt is the most general distribution and thereby, nests a number of alternative distributions, including the normal and t. 
 
-The first part of this step comes down to deciding if you want returns to be fat or thin tailed. If you want thin tailed returns then use the normal or t distribution with many degrees of freedom. If you want fat tails then use the t-distribution with few degrees of freedom or the sgt distribution. Finally if you want to tinker with the skewness and/or kurtosis of the distributions then use the sgt.
+The first part of this step involves deciding if you want returns to be fat- or thin-tailed. If you want thin-tailed returns, then use the normal distribution or the t distribution with many degrees of freedom. If you want fat tails, then use the t-distribution with few degrees of freedom or the sgt distribution. Finally, if you want control over the skewness and/or kurtosis of the distributions, then use the sgt.
 
-The second part involves deciding how to the respective distribution parameters across the assets. For example do you want all assets to have the same mean and sd? or do you want them to have the same mean and different sd, or different means and sd ect.. This is up to the user and depends on the purpose of doing the Monte Carlo.
+The second part involves deciding how to set the parameters of these distributions across the assets. For example, when using the normal distribution, should all assets have the same mean and sd? or should they have the same mean and different sd, or different means and sd ect.. This is up to the user and depends on the purpose of performing the Monte Carlo simulation.
 
-I will demonstrate how to do this using _MC_market_
-
-For simplicity this example will use the normal distribution.
+The code below demonstrates how to select asset distributions using in _MC_market's sim_market_ functions. For simplicity, this example will use the normal distribution.
 
 
 ```{r marginal dists}
 
-# Assigning mean = 10 and sd = 100 to all assets
+# Assigning mean = -10 and sd = 20 for all assets
 m1 <- sim_market(
-    corr_4,
-    k = 1000,
-    # selecting the pdf for the assets
-    marginal_dist = "norm",
-    # selecting parameters
-    marginal_dist_model = list(mu = -10, sd = 20)
-) # single arguments are assigned to all assets
+  corr_4,
+  k = 1000,
+  # selecting the pdf for the assets
+  marginal_dist = "norm",
+  # selecting parameters
+  marginal_dist_model = list(# single arguments are assigned to all assets
+    mu = -10,
+    sd = 20)
+)
 
 m1 %>% group_by(Asset) %>%
     mutate(mean = mean(Return), sd = sd(Return))
@@ -239,8 +239,10 @@ m2 <- sim_market(
     # selecting the pdf for the assets
     marginal_dist = "norm",
     # selecting parameters
-    marginal_dist_model = list(mu = 1:50, sd = 1:50)
-)  # mu/sd can take any vector of arguments
+    marginal_dist_model = list( # marginal_dist_model can take any vector of arguments
+      mu = 1:50, 
+      sd = 1:50)
+)  
 
 m2 %>% group_by(Asset) %>%
     mutate(mean = mean(Return), sd = sd(Return))
@@ -263,23 +265,21 @@ m3 %>% group_by(Asset) %>%
 
 ## Time-Series Properties
 
-The final step is to decide on how to assign time-series properties across the assets. Should each have the same time-series properties or should they all be set separately?
+The final step is to decide on how to assign time-series properties across the assets. _MCmarket_ has a function called _sim_garch_ that allows users to induce time-series properties into a vector of random numbers by setting the parameters of a ARMA(1,1) + APARCH(1,1) model. The _sim_market_ function then uses this function via is _ts_model_ argument.
 
-_MCmarket_ has a function called _sim_garch_ that allows users to induce time series properties into a vector of random numbers by setting the parameters of a ARMA(1,1) + APARCH(1,1) model. The _sim_market_ function then utilises this function via is _ts_model_ argument. 
+Return momentum can be induced by the ar and ma parameters, volatility persistence can be induced through the beta parameter, a leverage effect can be included through the Gamma parameter ect... The time-series parameters can be set the same across all assets or each asset's can be set individually. 
 
-This functionality allows one to create asset return series with highly persistent returns, leverage effects and various other GARCH characteristics. See ??MCmarket::sim_garch and ??fGarch::garchSpec for more information regarding the ARMA(1,1) + APARCH(1,1) parameters. 
+See ??MCmarket::sim_garch and ??fGarch::garchSpec for more information regarding the ARMA(1,1) + APARCH(1,1) parameters. 
 
+Note that when using the _ts_model_ argument, the means and sd in _marginal_dist_model_ should be left as 0 and 1, respectively. If not, then the moments are set twice and a warning message will appear.
 
-Note that when using the _ts_model_ argument, the means and sd in _marginal_dist_model_ should be left as 0 and 1 respectively. If not then the moments are set twice. 
+The code below demonstrates how to use _sim_garch_ to set the time-series properties of the simulated returns using a toy example.
 
 ```{r}
-# using the diagonal correlation matrix
-corr <- diag(50)
-
 set.seed(1234)
 m1 <-
     sim_market(
-        corr = corr,
+        corr = corr_4,
         k = 500,
         mv_dist = "t",
         mv_df = 3,
@@ -287,7 +287,7 @@ m1 <-
         # same non centrality parameter (ncp) and df for each asset
         marginal_dist_model = list(ncp = 0, df = 20),
         # same ts_model for each asset
-        ts_model = list(
+        ts_model = list( # Setting the same parameters for each Asset.
             # mean periodic return
             mu = 0.00002,
             # key unconditional volatility parameter
@@ -306,10 +306,11 @@ m1 <-
             delta = 1.85
         )
     )
+
 set.seed(1234)
 m2 <-
     sim_market(
-        corr = corr,
+        corr = corr_4,
         k = 500,
         mv_dist = "t",
         mv_df = 3,
@@ -317,7 +318,7 @@ m2 <-
         # same non centrality parameter (ncp) and df for each asset
         marginal_dist_model = list(ncp = 0, df = 20),
         # different ts model for each asset. at least for beta
-        ts_model = list(
+        ts_model = list( # Setting different beta parameters for each aset.
             # mean periodic return
             mu = 0.00002,
             # key unconditional volatility parameter
@@ -351,44 +352,56 @@ m2 %>% ggplot(aes(x = date, y = Return, color = Asset)) +
 
 # Monte Carlo
 
-The user has settled on the risk characteristics of the market they wish to simulate they can perform the Monte Carlo simulations. _MCmarket_ provides a _mc_market_ function to aid users who are not comfortable using the map function perform Monte Carlo simulations. However, it is recomended that users do so by hand as they can then use sim_markets progress bar functionality. 
+Once one knows the properties of the market they wish to simulate, they can perform the Monte Carlo simulation. _MCmarket_ provides a function called _mc_market_ that enables users who are not comfortable using the _map_ functions from the _purrr_ package to perform Monte Carlo simulations using _sim_market_. When performing large Monte Carlo simulations, it is recommended that users iterate over _sim_market_ by hand (see example below) as they can then use _sim_market's_ progress bar functionality, this is useful because calculations can take a number of minutes to complete. 
 
-```{r}
-# First using mc_market| Note smaller dimentions and N are used for plotting convenience
+The code below demonstrates how to use the _mc_market_ function, as well as how to use _purrr::map()_ and _sim_market_ to perform Monte Carlo simulations with a progress bar. 
+
+```{r mc_market}
+# First using mc_market| Note smaller dimensions and N are used for plotting convenience
 set.seed(123)
-mc1 <- mc_market(
-    corr = diag(20),
-    # Number of markets to simulate
-    N = 20,
-    k = 300,
+mc1 <-
+  mc_market(
+    corr_4,
+    N = 12,
+    k = 252,
+    mv_dist = "norm",
     marginal_dist = "sgt",
     marginal_dist_model = list(
-        mu = 0.01,
-        sd = 0.1,
-        # skewness parameter
-        lambda = -0.2,
-        # kurtosis parameter 1
-        p = 2,
-        # kurtosis parameter 2
-        q = Inf
+      mu = 0, 
+      sd = 1,
+      lambda = -0.05,
+      p = 2,
+      q = Inf
     ),
-    # list = True for a list of dataframes and list = FALSE for one long dataframe
-    list = FALSE # Only use list = FALSE for small N
-)
+    ts_model = list(
+      mu = 0.000002,
+      omega = 0.00005,
+      alpha = 0.7,
+      beta = 0.1,
+      ar = 0.05,
+      ma = NULL,
+      gamma = 0.05,
+      delta = 1.9
+    ),
+    list = FALSE # for long data
+  ) 
 
 # When the output is long it is easy to plot
 mc1 %>%
     group_by(Asset, Universe) %>%
     mutate(clumulative_ret = cumprod(1 + Return) * 100) %>%
-    ggplot(aes(x = date, y = clumulative_ret, color = Universe)) +
+    ggplot(aes(x = date, y = clumulative_ret, color = Asset)) +
     geom_line() +
-    facet_wrap( ~ Asset) +
+    facet_wrap( ~ Universe, scales = "free_y") +
     theme_bw() + 
-    theme(legend.position = "none")
+    theme(legend.position = "none") + 
+  labs(y = "Cumulative Return")
 
 ```
 
-```{r eval=FALSE, include=TRUE}
+See the example of how to perform a large Monte Carlo with a progress bar. 
+
+```{r sim_market with progress, eval=FALSE, include=TRUE}
 # For large Monte Carlos map by hand with a progress bar.
 pacman::p_load(MCmarket, purrr)
 N <- 1000
@@ -418,7 +431,3 @@ mc2 <- map(
 )
 
 ```
-
-
-
-

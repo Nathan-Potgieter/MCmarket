@@ -18,28 +18,29 @@ sim_market(
 }
 \arguments{
 \item{corr}{a correlation matrix specifying the correlation structure of the simulated data. The number
-of variables simulated is equal to the number of columns/rows. When using mv_dist = "clayton" then simulated
+of variables simulated is equal to the number of columns/rows. When using mv_dist = "clayton", then simulated
 returns do not adhere to this correlation matrix.}
 
 \item{k}{a positive integer indicating the number of time periods to simulate.}
 
-\item{mv_dist}{a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton"), these
+\item{mv_dist}{a string specifying the multivariate distribution. It can be one of c("norm", "t", "clayton"), these
 correspond to the respective multivariate normal, t and Clayton distributions. This will effect how the
-returns are cross-sectionally distributed. When using mv_dist = "clayton" assets will exhibit high left-tail dependence,
-but will not adhere to the user specified correlation matrix corr matrix.}
+returns are cross-sectionally distributed. When using mv_dist = "clayton", assets will exhibit high left-tail dependence,
+but will not adhere to the user-defined correlation matrix.}
 
-\item{mv_df}{degrees of freedom of the multivariate t distribution (> 0, maybe non-integer). The default is 4 and is only
-needed when mv_dist = "t".}
+\item{mv_df}{degrees of freedom of the multivariate t distribution (> 0, can be a non-integer).
 
-\item{clayton_param}{a value (> 0, maybe non-integer) indicating the parameter of the Clayton copula.
+The default is 4 and is only needed when mv_dist = "t".}
+
+\item{clayton_param}{a value (> 0, can be a non-integer) indicating the parameter of the Clayton copula.
 
 The default is 1 and is only needed when mv_dist = "clayton".}
 
 \item{marginal_dist}{a string variable specifying the univariate distribution of the asset return series. This can
-be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t distributions respectively.
+be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t distributions, respectively.
 Default is "norm".}
 
-\item{marginal_dist_model}{list containing the relevant parameters for the chosen _marginal_dist_ model.
+\item{marginal_dist_model}{list containing the relevant parameters for the chosen marginal_dist_ model.
 
 marginal_dist = "norm" accepts the mean (mu) and standard deviation (sd) arguments with their respective
 defaults set to list(mu = 0, sd = 1).
@@ -48,26 +49,26 @@ marginal_dist = "t" accepts the non-centrality parameter (ncp) and degrees of fr
 default values are list(ncp = 0, df = 5).
 
 marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters
-list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore be set
+list(mu = 0, sigma = 1, lambda, p, q). Note that lambda, p and q have no defaults and must, therefore, be set
 by the user. For more information on the parameters see ?sgt::sgt.}
 
 \item{ts_model}{a list containing various ARMA + APGARCH model parameters. These parameters specify
-the time series properties of the simulated returns. Note that parameter combinations resulting
-in non-stationary of the mean or variance will produce NAN's and that the maximum lag allowed for
+the time-series properties of the simulated returns. Note that parameter combinations resulting
+in non-stationarity of the mean or variance will produce NAN's and that the maximum lag allowed for
 any given parameter is 1.
 
 The default is ts_model = NULL, in which case the time-series properties are not induced, however, if
 ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0,
-ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset simply insert a vector
-of length equal to the number of assets, the first element of the vector will correspond to Asset_1, the 2nd
+ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset, simply insert a vector
+of length equal to the number of assets, the 1st element of the vector will correspond to Asset_1, the 2nd
 to Asset_2 ect...
 
 For more details on the ARMA + APGARCH, see the ?sim_garch and the "model" parameter in ?fGarch::garchSpec.}
 
-\item{progress}{a logical value indicating if sim market should produce a progress bar when iterated over. See
+\item{progress}{a logical value indicating if sim_market should produce a progress bar when iterated over. See
 examples on how to use correctly.
 
-When simulating many markets, due to memory concerns, it is suggested that users use map() over map_dfr().
+Due to memory concerns, when simulating many markets it is suggested that users use map() over map_dfr().
 map_dfr() produces a long/tidy data set and is therefore, useful when wanting to produce a plot with ggplot2.}
 }
 \value{
@@ -75,15 +76,13 @@ a tidy tibble containing a date, Asset and Return column.
 }
 \description{
 This function simulates a series of returns for an asset market with a wide range of
-user specified cross-section and time-series risk-return properties.
+user-defined cross-section and time-series risk-return properties.
 }
 \note{
-It is suggested that, if the ts_model argument is used,
+It is suggested that if the ts_model argument is used, then the marginal distributions be
+left as list(mu = 0, sd = 1) for marginal_dist = "norm" or "sgt", and list(ncp = 0) for marginal_dist = "t".
 
-then the marginal distributions be left as list(mu = 0, sd = 1) for marginal_dist = "norm" or "sgt",
-and list(ncp = 0) for marginal_dist = "t".
-
-If this is not done, a warning message will appear. These attributes are better off being set in the
+If this is not done, a warning message will appear. It is better to set these attributes with the
 ts_model argument, see the mu and omega parameters.
 }
 \examples{
@@ -108,9 +107,9 @@ market_data <-
                      marginal_dist = "norm",
                      ts_model = list(mu = 0.000002,
                                      omega = 0.00005,
-                                     alpha = 0.098839,
-                                     beta = 0.899506,
-                                     ar = 0.063666,
+                                     alpha = 0.09,
+                                     beta = 0.8,
+                                     ar = 0.06,
                                      ma = NULL,
                                      gamma = 0.001,
                                      delta = 1.85),

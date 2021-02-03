@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta property="dc:format" content="text/html">
+<meta name="generator" content="pandoc">
+<meta name="viewport" content="width=device-width">
+<meta property="dc:type" content="Text">
+<meta property="dc:language" content="en">
+<meta property="dc:title og:title" content="MCmarkete: An R package for the Monte Carlo Simulation of Financial Markets">
+
+<meta property="og:image" content="https://www.jstatsoft.org/public/site/images/jstatsoft/jsslogo.jpg">
+<link rel="icon" href="https://www.jstatsoft.org/public/journals/1/journalFavicon_en_US.gif">
+<meta name="description" property="dc:description og:description schema:description" content="MCmarkete: An R package for the Monte Carlo Simulation of Financial Markets">
+
+
+<meta name="keywords" property="dc:subject" content="monte carlo, copula, garch">
+
+<title>MCmarkete: An R package for the Monte Carlo Simulation of Financial Markets</title>
+
+<script>
+window.PagedConfig = {
+  before: async () => {
+    // Expand the citations links
+    let citations = document.querySelectorAll('.citation');
+    for (let citation of citations) {
+      let anchor = citation.querySelector('a');
+      if (!anchor) continue;
+      let span = document.createElement('span');
+      span.innerHTML = anchor.innerHTML
+      anchor.insertAdjacentElement('afterend', span)
+      let href = anchor.getAttribute('href')
+      anchor.remove();
+
+      let newAnchor = document.createElement('a');
+      newAnchor.setAttribute('href', href);
+      citation.insertAdjacentElement('beforebegin', newAnchor);
+      newAnchor.appendChild(citation);
+    }
+
+    // For the table captions, we would want to write this CSS rule:
+    //     caption {caption-side: bottom-outside;}
+    // However, the bottom-outside value is not standard and not implemented in Chrome.
+    // So, we need to modify the DOM.
+    let tables = document.querySelectorAll('table');
+    for (let table of tables) {
+      let caption = table.querySelector('caption');
+      if (!caption) continue;
+      let tableContainer = document.createElement('div');
+      tableContainer.className = 'table-container';
+      table.insertAdjacentElement('beforebegin', tableContainer);
+      tableContainer.appendChild(table);
+      let bookdownIdentifier = caption.querySelector('span[id^="tab\\:"]');
+      if (!!bookdownIdentifier) {
+        let tableId = bookdownIdentifier.id;
+        bookdownIdentifier.removeAttribute('id');
+        table.id = tableId;
+      }
+      let newCaption = document.createElement('p');
+      newCaption.className = 'caption';
+      newCaption.innerHTML = caption.innerHTML;
+      caption.remove();
+      tableContainer.appendChild(newCaption);
+    }
+  }
+}
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function() {
+  let beforePaged = PagedConfig.before;
+
+  window.PagedConfig = {
+    before: async () => {
+      await beforePaged();
+      await new Promise((resolve, reject) => {
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+        var src = `https://mathjax.rstudio.com/latest/MathJax.js` + "?config=TeX-MML-AM_CHTML";
+        if (location.protocol !== "file:" && /^https?:/.test(src))
+          src = src.replace(/^https?:/, '');
+        script.src = src;
+        window.MathJax = {
+          AuthorInit: () => {
+            MathJax.Hub.Register.StartupHook("Begin", () => {
+              MathJax.Hub.Queue(resolve);
+            });
+          }
+        };
+        document.getElementsByTagName("head")[0].appendChild(script);
+      });
+    }
+  };
+})();
+</script>
+
+<link href="vignette_files/paged-0.13/css/jss-fonts.css" rel="stylesheet" />
+<link href="vignette_files/paged-0.13/css/jss-page.css" rel="stylesheet" />
+<link href="vignette_files/paged-0.13/css/jss.css" rel="stylesheet" />
+<script src="vignette_files/paged-0.13/js/config.js"></script>
+<script src="vignette_files/paged-0.13/js/paged.js"></script>
+<script src="vignette_files/paged-0.13/js/hooks.js"></script>
+
+
+
+
+</head>
+
+<body>
+  <div style="display:none" aria-hidden="true">
+  \(
+    \let\pkg=\mathbf
+    \let\proglang=\textsf
+    \let\code=\texttt
+    \newcommand{\E}{\mathsf{E}}
+    \newcommand{\VAR}{\mathsf{VAR}}
+    \newcommand{\COV}{\mathsf{COV}}
+    \newcommand{\Prob}{\mathsf{P}}
+  \)
+  </div>
+
+
+<header class="document-header">
+<img class="journal-name" alt="Journal of Statistical Software" src="https://www.jstatsoft.org/public/journals/1/homeHeaderTitleImage_en_US.png">
+<p class="header-meta">
+  <span class="issue">MMMMMM YYYY, Volume VV, Issue II.</span>
+  <a href="https://doi.org/10.18637/jss.v000.i00" class="doi">doi: 10.18637/jss.v000.i00</a>
+</p>
+</header>
+
+<article>
+
+<header id="header" class="title-page">
+<h1 class="title">MCmarkete: An R package for the Monte Carlo Simulation of Financial Markets</h1>
+<span class="shorttitle" style="display: none;" aria-hidden="true">MCmarket</span>
+<div class="authors-container" role="list">
+<p class="author-item" role="listitem" style="--rank: 1;">
+<span class="author">Nathan Potgieter</span>
+<br><span class="author-affil">
+Stellenbosch University
+</span>
+</p>
+</div>
+</header>
+
+<section class="abstract" property="dc:abstract">
+<h2 class="abstract-header">Abstract</h2>
+<div class="abstract-content">
+<p>This work presents <em>MCmarket</em>, an R package designed to provide users with the tools to easily perform Monte Carlo simulations of financial asset markets. The framework set out in the package allows users to specify the market’s cross-section dependence structure using the multivariate distributions described by the Gaussian, t and Clayton copulas. The asset return series can be set in accordance with a normal, t or skewed generalized t probability distribution function (pdf). Mean and variance persistence can then be induced by invoking an ARMA + APGARCH model. This package can be used in risk management, asset or derivative pricing and evaluating or robustness-testing of portfolio trading algorithms, among others.</p>
+</div>
+<section class="keywords" role="list" aria-labelledby="keywords-header">
+<p><span id="keywords-header" class="keywords-heading" aria-level="3" role="heading">Keywords</span>: <span role="listitem">monte carlo</span>, <span role="listitem">copula</span>, <span role="listitem">garch</span>.</p>
+</section>
+</section>
+
+<main role="main">
+<div id="introduction" class="section level1">
+<h1><span class="header-section-number">1</span> Introduction</h1>
+<p>In the field of quantitative finance, Monte Carlo simulations have been used extensively in the evaluation of portfolio optimization algorithms, risk management and the pricing of financial securities. Their unique ability to generate an ensemble of counter-factuals i.e. possible alternative realizations of stochastic processes with identical characteristics, makes them a powerful tool in aiding decision making in domains dominated by random events. They are also relatively easy to construct compared to alternative techniques that rely on complex mathematics. Meanwhile, the steady improvement in computer processing power has made the more sophisticated Monte Carlo techniques increasingly viable.</p>
+<p>This work lays out a generalized adaption of a pre-established framework for performing the Monte Carlo simulation of financial asset market returns, built into the MCmarket package. Importantly, the framework simulates markets to be in accordance with the user-defined dependence structure. This framework also provides the functionality to induce various univariate asset return distributions, as well as, specify the mean and variance persistence of the return series. The setting of time-series persistence is accomplished with a high degree of precision, since the exact parameters of each asset’s ARIMA(p,q) + APGARCH(q,p) equation can be specified. The key input to this financial market Monte Carlo framework is typically the market’s correlation matrix. This greatly effects the potential for diversification and impacts risk management. An interesting addition to this package is the option to use the Clayton copula to specify the market’s multivariate distribution/cross-sectional dependence. Unfortunately, this removes the users ability to stipulate the market correlation structure, but creates markets with left-tail dependence. In other words, when using the Clayton copula, the correlation between assets increases in periods when average market returns are low, and decrease when they are high. This functionality is particularly useful when simulating asset markets since it is a well documented phenomenon that financial returns experience increased co-dependence during turbulent times <span class="citation">(Syriopoulos and Roumpis <a href="#ref-syriopoulos2009" role="doc-biblioref">2009</a>)</span>.</p>
+<p>The aim of developing this package was to provide users with a set of functions that allow them to simulate financial market return data with a highly generalizable set of risk factors. Furthermore, usability was a key concern when developing the package as it aimed to enable users with minimal knowledge of coding and/or the underlying mathematical/statistical techniques to quickly and easily perform Monte Carlo simulations. Due to the importance of dynamic correlations observed within financial markets during crisis periods, an avenue to induce various levels of the left-tail dependence within the market multivariate distribution was also implemented. At this stage, the package presents a highly generalized tool for simulating financial markets that users with some prior knowledge of statistical concepts, such as probability distributions and time-series models, can grasp. At a later stage, a dashboard will be created for non-technical users to be able to simulate markets from a list of presets. Furthermore, the Monte Carlo framework will be extended to enable the option for regime shifts in the correlation structure, this will be implemented through a Markov process and will enable the evaluation of financial models during market changes.</p>
+</div>
+<div id="methodology" class="section level1">
+<h1><span class="header-section-number">2</span> Methodology</h1>
+<p>The methodology used in the MCmarket package is a generalized adaption of that used in <span class="citation">Wang, Sullivan, and Ge (<a href="#ref-wang2012" role="doc-biblioref">2012</a>)</span>. This involves the use of copulas to define the market’s multivariate distribution, which is then used to simulate random uniformly distributed draws with various pre-specified dependence structures. These random uniformly distributed draws serve as the building blocks of the Monte Carlo process. They are the only source of randomness since all further steps are deterministic manipulations of said observations <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>. Note that the distribution of each of these random draws are referred to as univariate distributions. In this context, it is useful to think of a copula as a multivariate cumulative distribution function (CDF) with Uniform (0,1) marginal distributions <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>[p. 183])</span>. Since all variables posses the same marginal cumulative distribution function (CDF), copulas only contain information on the dependencies within the multivariate distribution <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>.</p>
+<p>MCmarket incorporates two broad families of copula’s, namely the Elliptical and Archimedean. The Elliptical Gaussian and t-copulas correspond to the respective multivariate normal and t distributions. These are used for their convenient property of relying on a <span class="math inline">\(D \times D\)</span> correlation matrix to define their dependence. The t-copula also has a degrees of freedom parameter which is useful for adjusting market risk. Archimedean copulas, on the other hand, define multivariate distributions which exhibit either left or right tail dependence. This refers to an increase or decrease in dependence within either the left or right tail of the multivariate distribution. Often the dependence further increases or decreases as observations occur further in the tails. Due to issues concerning the speed of computation and functionality within high dimensions, only the Clayton copula is used. This copula was found to be particularly useful since it naturally possesses left-tail dependence and can be defined in high dimensional spaces with limited cost to computational speed. Unfortunately, the Clayton copula does not accept a correlation matrix as one of its parameters and can therefore, not be used to simulate markets with predefined correlation structures. An avenue to create Archrimdian-Clayton hybrid copulas was investigated, however, these proved to be unsuccessful in dimensions greater than 2.</p>
+<p>Another important property of copulas is that their component variables are invariant to monotonic (strictly increasing) transformations <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>. This property allows for the transformation of the marginals from Uniform(0,1) into any other closed form distribution via the inversion of the semi-parametric CDF <span class="citation">(Ruenzi and Weigert <a href="#ref-ruenzi2011" role="doc-biblioref">2011</a>)</span>. MCmarket provides users with the functionality to transform the Uniform(0,1) univariate distributions into normal, student-t or skewed generalized t (SGT) distributions. It is important to reiterate that this step is simply a transformation and involves no randomness given the inputs i.e. the random uniformly distributed draws.</p>
+<p>MCmarket allows users to induce mean and/or variance persistence into the simulated data. This is accomplished via the use of the time-series ARMA + APARCH model and involves plugging the univariate distributions, which have by now been transformed to either normal, student-t or SGT distributions, into an ARMA(p,q) + GARCH(q,p) equation as the innovations of the process. This allows the user to precisely select parameters describing the time-series properties of the simulated data, and thereby, introduce varying degrees of mean and variance persistence. This step, if done correctly, is able to introduce many of the time-series characteristics observed in real world financial return data. For example, financial returns have been noted to posses “outlier-prone” probability distributions, by inducing variance persistence it becomes far more likely for the simulated returns to produce outliers <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>. Another empirical phenomenon observed in many financial time-series that can be replicated, is that negative returns tend to positively influence volatility by more than positive returns of equal magnitude. This is referred to as the leverage effect and the APARCH model is one such volatility model capable of accommodating this effect. Specifically, this is accomplished via its gamma parameter <span class="citation">(Ruppert and Matteson <a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>. Furthermore, the generalizable nature of APARCH (it nests at least 7 other models including the vanilla GARCH and ARCH models) makes it ideal to incorporate into MCmarket’s framework <span class="citation">(Laurent <a href="#ref-laurent" role="doc-biblioref">2004</a>)</span>.</p>
+</div>
+<div id="process" class="section level1">
+<h1><span class="header-section-number">3</span> Process</h1>
+<p>The Monte Carlo process involves the following 4 steps:</p>
+<p>This example generates k periods of returns for D Assets across N counter-factual markets.</p>
+<ol style="list-style-type: decimal">
+<li>Draw a series of k random, uniformly distributed numbers (corresponding to k trading periods), across a set of D variables (or D assets) from a multivariate Gaussian, t or Clayton copula.
+<ul>
+<li>The Gaussian and t-copulas can be specified with a correlation matrix and the Archmediean Clayton copula can be used to induce left-tail dependence. This is easily accomplished using R’s <em>copula</em> package <span class="citation">(Hofert, Kojadinovic, Maechler, and Yan <a href="#ref-copula" role="doc-biblioref">2020</a>)</span>.</li>
+</ul></li>
+<li>Convert the univariate distributions from uniform into something that more resembles the distribution of asset returns. For example, one could convert them into normal, student-t or skewed-generalized t distributions.
+<ul>
+<li>Practically, this is done the same way one would convert p-values into test statistics using the dnorm(), dt() and dsgt() functions respectively <span class="citation">(Davis <a href="#ref-sgt" role="doc-biblioref">2015</a>; Wang et al. <a href="#ref-wang2012" role="doc-biblioref">2012</a>)</span>.</li>
+<li>Technically, this is accomplished via the inversion of the chosen cumulative distribution function (CDF).</li>
+</ul></li>
+<li>Induce mean and variance persistence to the series by plugging the results from step 2 into an ARMA(p,q) + GARCH(q,p) equation as the i.i.d innovations.
+<ul>
+<li>If the parameters are set accordingly, the resulting series will closely resemble real world return data.</li>
+</ul></li>
+<li>Repeat the first 3 steps N times to generate an ensemble of asset markets, each with the same risk characteristics but different realizations.</li>
+</ol>
+<div class="page-break-after"></div>
+</div>
+<div id="functions-and-examples" class="section level1">
+<h1><span class="header-section-number">4</span> Functions and Examples</h1>
+<div id="gen_cor" class="section level2">
+<h2><span class="header-section-number">4.1</span> gen_cor</h2>
+<p>This function allows users to easily generate a user-defined ad hoc correlation matrix with up to four layers of clusters.</p>
+<div id="parameters-gen_cor" class="section level3">
+<h3><span class="header-section-number">4.1.1</span> Parameters: gen_cor</h3>
+<ul>
+<li>D the number of variables. The output is a D by D correlation matrix.</li>
+<li>clusters a character string specifying the type of cluster structure. Available options are:
+<ul>
+<li>“none” for a correlation matrix with no clusters, but significant correlation
+between constituents.</li>
+<li>“non-overlapping” for a correlation matrix with one layer of clusters.</li>
+<li>“overlapping” for a correlation matrix with up to four layers and a set number of clusters per layer.</li>
+</ul></li>
+<li>num_clusters
+<ul>
+<li>If clusters = “none”, then num_clusters is not used.</li>
+<li>If clusters = “non-overlapping”, then num_clusters is an integer indicating the number of clusters.</li>
+<li>If clusters = “overlapping”, then num_clusters is a vector of length less than or equal to four. The length of num_clusters specifies the number of cluster layers and the integers within the vector specify the number of clusters per layer. It is preferable to arrange the vector in descending order, since failing to do so can result in a unique output, which may not contain the intended number of layers. Additionally, using combinations with repeating numbers of clusters, for example num_clusters = C(10, 10, 5, 5)) will produce fewer layers, but unique intra-cluster correlations (See examples).</li>
+</ul></li>
+<li>Value
+<ul>
+<li>This function returns a D by D correlation matrix.</li>
+</ul></li>
+</ul>
+<pre class="r r-chunk-code"><code>R&gt; ### Loading required packages.
+R&gt; library(&quot;MCmarket&quot;)
+R&gt; library(&quot;ggcorrplot&quot;)
+R&gt; library(&quot;dplyr&quot;)
+R&gt; 
+R&gt; ### 50 by 50 Correlation matrix with no clusters.
+R&gt; cor1 &lt;- gen_corr(D = 50, clusters = &quot;none&quot;)
+R&gt; ggcorrplot(cor1, title = &quot;No Clusters&quot;)</code></pre>
+<p><img src="vignette_files/figure-html/gen_cor-1.png" width="42%" height="42%" style="display: block; margin: auto;" /></p>
+<pre class="r r-chunk-code"><code>R&gt; ### 50 by 50 correlation matrix with 5 non-overlapping clusters.
+R&gt; cor2 &lt;- gen_corr(D = 50, clusters = &quot;non-overlapping&quot;, num_clusters = 5)
+R&gt; ggcorrplot(cor2, title = &quot;Non-Overlapping Clusters&quot;)</code></pre>
+<p><img src="vignette_files/figure-html/gen_cor-2.png" width="42%" height="42%" style="display: block; margin: auto;" /></p>
+<pre class="r r-chunk-code"><code>R&gt; ### 50 by 50 correlation matrix with 2, 5 and 10 overlapping clusters. 
+R&gt; cor3 &lt;- gen_corr(D = 50, clusters = &quot;overlapping&quot;, num_clusters = c(10, 5, 2))
+R&gt; ggcorrplot(cor3, title = &quot;Three Layers of Overlapping Clusters&quot;)</code></pre>
+<p><img src="vignette_files/figure-html/gen_cor-3.png" width="42%" height="42%" style="display: block; margin: auto;" /></p>
+<div class="page-break-after"></div>
+</div>
+</div>
+<div id="sim_garch" class="section level2">
+<h2><span class="header-section-number">4.2</span> sim_garch</h2>
+<p>This function takes a vector of random numbers, referred to as innovations, and induces mean and variance persistence by inserting them into an ARMA(1,1) + APARCH(1,1) model.</p>
+<div id="parameters-sim_garch" class="section level3">
+<h3><span class="header-section-number">4.2.1</span> Parameters: sim_garch</h3>
+<ul>
+<li><p>innovations a vector containing the random numbers or the innovations of the ARIMA + GARCH process.</p></li>
+<li><p>omega a positive value defining the coefficient of the variance equation. The default is 5e-04.</p></li>
+<li><p>gamma a value defining the APARCH leverage parameter in the variance equation. The default of 0 implies no leverage effect and therefore, corresponds to the standard GARCH model.</p></li>
+<li><p>alpha a value defining the autoregressive variance coefficient. The default is 0.</p></li>
+<li><p>beta a value defining the variance coefficient. The default is 0.</p></li>
+<li><p>mu a value defining the mean. The default is 0.</p></li>
+<li><p>ar a value defining the autoregressive ARMA coefficient. The default is 0.</p></li>
+<li><p>ma a value defining the moving average ARMA coefficient. The default is 0.</p></li>
+<li><p>delta a strictly positive value defining the delta parameter of the APARCH model. The default is 2, which corresponds to the standard GARCH model.</p></li>
+<li><p>simple a logical parameter indicating if the output should be a simple vector containing just the resulting ARIMA + GARCH series, or if FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA + APARCH series.</p></li>
+<li><p>Value</p>
+<ul>
+<li>If simple = TRUE this function returns a vector of the resulting ARMA + APARCH series. Else if simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA + APARCH series. Note the length of the resulting series will be one observation less than that that of the innovations as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.</li>
+</ul></li>
+<li><p>Note</p>
+<ol style="list-style-type: decimal">
+<li>It is suggested that the randomly distributed numbers have a mean of zero and standard deviation of one, as these attributes can be set within sim_garch.</li>
+<li>For more information on the ARMA + APARCH parameters see <span class="citation">Ruppert and Matteson (<a href="#ref-ruppert" role="doc-biblioref">2011</a>)</span>.</li>
+</ol></li>
+</ul>
+</div>
+<div id="examples-sim_garch" class="section level3">
+<h3><span class="header-section-number">4.2.2</span> Examples: sim_garch</h3>
+<pre class="r r-chunk-code"><code>R&gt; ### Loading required packages.
+R&gt; library(&#39;MCmarket&#39;)
+R&gt; library(&#39;tidyverse&#39;)
+R&gt; 
+R&gt; ### Creating series of 501 innovations
+R&gt; set.seed(586423)
+R&gt; inno &lt;-  rnorm(501)
+R&gt; 
+R&gt; ### This produces a ARIMA + GARCH series of length 500.
+R&gt; GARCH &lt;- sim_garch(inno,
+R+                    mu = 0.000002,
+R+                    omega = 0.00005,
+R+                    alpha = 0.098839,
+R+                    beta = 0.899506,
+R+                    ar = 0.063666,
+R+                    ma = NULL,
+R+                    gamma = 0.12194,
+R+                    delta = 1.85,
+R+                    simple = FALSE
+R+                    )
+R&gt; head(GARCH, 10)</code></pre>
+<pre><code># A tibble: 10 x 3
+        z      h       y
+    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+ 1 NA     NA     NA     
+ 2  0.226  0.143  0.0323
+ 3 -1.15   0.135 -0.154 
+ 4 -0.767  0.140 -0.117 
+ 5  0.231  0.138  0.0244
+ 6  0.905  0.131  0.120 
+ 7  0.609  0.128  0.0859
+ 8 -1.18   0.124 -0.140 
+ 9 -1.70   0.128 -0.227 
+10 -1.25   0.143 -0.193 </code></pre>
+<pre class="r r-chunk-code"><code>R&gt; ### Plotting z - the innovations, h - the conditional variance and y - ARMA + APARCH series.
+R&gt; GARCH %&gt;% na.omit() %&gt;%
+R+   gather() %&gt;% group_by(key) %&gt;% 
+R+   mutate(period = 1:n()) %&gt;% 
+R+   ggplot(aes(x=period, y = value, color=key)) +
+R+   geom_line() + 
+R+   facet_wrap(~key, nrow = 3, scales = &quot;free_y&quot;) + theme_bw()</code></pre>
+<p><img src="vignette_files/figure-html/sim_garch-1.png" width="80%" height="70%" style="display: block; margin: auto;" /></p>
+<div class="page-break-after"></div>
+</div>
+</div>
+<div id="sim_market" class="section level2">
+<h2><span class="header-section-number">4.3</span> sim_market</h2>
+<p>This function simulates a series of returns for an asset market with a wide range of user-defined cross-section and time-series risk-return properties.</p>
+<div id="parameters-sim_market" class="section level3">
+<h3><span class="header-section-number">4.3.1</span> Parameters: sim_market</h3>
+<ul>
+<li>corr a correlation matrix specifying the correlation structure of the simulated data. The number of variables simulated is equal to the number of columns/rows. When using mv_dist = “clayton”, then simulated returns do not adhere to this correlation matrix.</li>
+<li>k a positive integer indicating the number of time periods to simulate.</li>
+<li>mv_dist a string specifying the multivariate distribution. It can be one of c(“norm”, “t”, “clayton”), these
+correspond to the respective multivariate normal, t and Clayton distributions. This will effect how the returns are cross-sectionally distributed. When using mv_dist = “clayton”, assets will exhibit high left-tail dependence, but will not adhere to the user-defined correlation matrix.</li>
+<li>mv_df degrees of freedom of the multivariate t distribution (&gt; 0, can be a non-integer). The default is 4 and is only needed when mv_dist = “t”.</li>
+<li>clayton_param a value (&gt; 0, can be a non-integer) indicating the parameter of the Clayton copula. The default is 1 and is only needed when mv_dist = “clayton”.</li>
+<li>marginal_dist a string variable specifying the univariate distribution of the asset return series. This can be one of c(“norm”, “t”, “sgt”) referring to the normal, student-t and skewed-generalized-t distributions, respectively. Default is “norm”.</li>
+<li>marginal_dist_model list containing the relevant parameters for the chosen marginal_dist_ model.
+<ul>
+<li>marginal_dist = “norm” accepts the mean (mu) and standard deviation (sd) arguments with their respective defaults set to list(mu = 0, sd = 1).</li>
+<li>marginal_dist = “t” accepts the non-centrality parameter (ncp) and degrees of freedom (df) arguments, default values are list(ncp = 0, df = 5).</li>
+<li>marginal_dist = “sgt” accepts the mean (mu), standard deviation (sd), lambda, p and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note that lambda, p and q have no defaults and must, therefore, be set by the user. For more information on the parameters see ?sgt::sgt.</li>
+</ul></li>
+<li>ts_model a list containing various ARMA + APGARCH model parameters. These parameters specify the time-series properties of the simulated returns. Note that parameter combinations resulting in non-stationarity of the mean or variance will produce NAN’s and that the maximum lag allowed for any given parameter is 1.
+<ul>
+<li>The default is ts_model = NULL, in which case the time-series properties are not induced, however, if ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset, simply insert a vector of length equal to the number of assets, the 1st element of the vector will correspond to Asset_1, the 2nd to Asset_2 ect…</li>
+<li>For more details on the ARMA + APGARCH, see the ?sim_garch and the “model” parameter in ?fGarch::garchSpec.</li>
+</ul></li>
+<li>a logical value indicating if sim market should produce a progress bar when iterated over. See examples on how to use correctly.
+<ul>
+<li>Due to memory concerns, when simulating many markets it is suggested that users use map() over map_dfr(). map_dfr() produces a long/tidy data set and is therefore, useful when wanting to produce a plot with ggplot2.</li>
+</ul></li>
+<li>Value
+<ul>
+<li>This function returns a tidy tibble containing a date, Asset and Return column.</li>
+</ul></li>
+<li>Note
+<ul>
+<li>It is suggested that if the ts_model argument is used, then the marginal distributions be left as list(mu = 0, sd = 1) for marginal_dist = “norm” or “sgt”, and list(ncp = 0) for marginal_dist = “t”. If this is not done, a warning message will appear. It is better to set these attributes with the ts_model argument, see the mu and omega parameters.</li>
+</ul></li>
+</ul>
+</div>
+<div id="examples-sim_market" class="section level3">
+<h3><span class="header-section-number">4.3.2</span> Examples: sim_market</h3>
+<pre class="r r-chunk-code"><code>R&gt; ### Loading required packages.
+R&gt; library(&#39;MCmarket&#39;)
+R&gt; library(&#39;tidyverse&#39;)
+R&gt; #=============================
+R&gt; # Simulating a single market
+R&gt; #=============================
+R&gt; ### creating a correlation matrix of 50 assets to use as an input in sim_asset_market.
+R&gt; corr &lt;- gen_corr(D = 20, clusters = &quot;none&quot;)
+R&gt; ### simulating 500 periods of returns across 50 assets.
+R&gt; set.seed(12345)
+R&gt; market_data &lt;-
+R+         sim_market(corr,
+R+                     k = 500,
+R+                     mv_dist = &quot;norm&quot;,
+R+                     marginal_dist = &quot;norm&quot;,
+R+                     ts_model = list(mu = 0.000002,
+R+                                     omega = 0.00005,
+R+                                     alpha = 0.09,
+R+                                     beta = 0.8,
+R+                                     ar = 0.06,
+R+                                     ma = NULL,
+R+                                     gamma = 0.001,
+R+                                     delta = 1.95),
+R+                     progress = FALSE)
+R&gt; #==================================================
+R&gt; # Performing Monte Carlo&#39;s with a Progress bar
+R&gt; #==================================================
+R&gt; ### For small N&lt;500, can use map_dfr for tidy output.
+R&gt; N &lt;- 50
+R&gt; pb &lt;- dplyr::progress_estimated(N) # Setting length of progress bar, Must be named pb.
+R&gt; market &lt;-
+R+      map_dfr(1:N,
+R+              ~sim_market(corr,
+R+                          marginal_dist = &quot;norm&quot;,
+R+                          marginal_dist_model = list(mu = 0.02, sd = 0.5),
+R+                          progress = TRUE),
+R+              .id = &quot;Universe&quot;) # adds an extra key/identification column.
+R&gt; ### Visualizing the market
+R&gt; market %&gt;% group_by(Asset, Universe) %&gt;%
+R+ mutate(cum_ret = 100*cumprod(1 + Return)) %&gt;%
+R+         ggplot() +
+R+         geom_line(aes(x = date, y = cum_ret, color = Universe)) +
+R+        facet_wrap(~Asset, scales = &quot;free_y&quot;) +
+R+        theme(legend.position = &quot;none&quot;)
+R&gt; ### For large N&gt;500, should rather use map for list output.
+R&gt; N &lt;- 1000
+R&gt; pb &lt;- dplyr::progress_estimated(N)   # this must be named pb
+R&gt; market &lt;- map(1:N,
+R+              ~sim_market(corr, progress = TRUE))</code></pre>
+<div class="page-break-after"></div>
+</div>
+</div>
+<div id="mc_market" class="section level2">
+<h2><span class="header-section-number">4.4</span> mc_market</h2>
+<p>This function performs a Monte Carlo simulation by iterating over the the sim_market function N times. It is intended for users who are not comfortable using the purrr::map functions.</p>
+<div id="parameters-mc_market" class="section level3">
+<h3><span class="header-section-number">4.4.1</span> Parameters: mc_market</h3>
+<ul>
+<li>Note
+<ol style="list-style-type: decimal">
+<li>see ?sim_market for information on the other parameters.</li>
+<li>See examples under sim_market for instructions on how to add an on-screen progress bar when performing the Monte Carlo simulation, this is recommended for simulations with N &gt;1000 since they can take a number of minuets to complete.</li>
+</ol></li>
+<li>N a positive integer indicating the number of markets to simulate.</li>
+<li>list a logical value indicating whether the output should be a list of tibbles or a single long tibble (see return).
+<ul>
+<li>Due to memory issues associated with list = FALSE, list = TRUE is recommend for N &gt; 500. List = FALSE is best used for tidy output that can easily be plotted with ggplot2 (see example)a logical value indicating whether the output should be a list of tibbles or a single long tibble (see return). Due to memory issues associated with list = FALSE, list = TRUE is recommended for N &gt; 500. List = FALSE is best used for tidy output that can easily be plotted with ggplot2 (see example).</li>
+</ul></li>
+<li>Value
+<ul>
+<li>if list = TRUE (default), a list of length N where each entry contains a tidy tibble with a date, Asset and Return column. Else if list = FALSE a single tidy tibble with date, Universe, Asset and Return columns.</li>
+</ul></li>
+</ul>
+</div>
+<div id="examples-mc_market" class="section level3">
+<h3><span class="header-section-number">4.4.2</span> Examples: mc_market</h3>
+<pre class="r r-chunk-code"><code>R&gt; ### Loading required packages.
+R&gt; library(&#39;MCmarket&#39;)
+R&gt; library(&#39;tidyverse&#39;)
+R&gt; 
+R&gt; # creating a correlation matrix to use as input in sim_asset_market
+R&gt; corr &lt;- gen_corr(D = 20, clusters = &quot;none&quot;)
+R&gt; 
+R&gt; # simulating 550 periods of returns across 50 assets
+R&gt; set.seed(12542)
+R&gt; mc_data &lt;-
+R+   mc_market(corr,
+R+             N = 12,
+R+             k = 550,
+R+             mv_dist = &quot;norm&quot;,
+R+             marginal_dist = &quot;norm&quot;,
+R+             ts_model = list(mu = 0.000002,
+R+                             omega = 0.00005,
+R+                             alpha = 0.7,
+R+                             ar = 0.05,
+R+                             ma = NULL,
+R+                             gamma = 0.05,
+R+                             delta = 1.9
+R+                               ),
+R+             list = FALSE # for long data, better for plotting. 
+R+             ) 
+R&gt; 
+R&gt; # Visualising the market
+R&gt; mc_data %&gt;%
+R+   group_by(Asset, Universe) %&gt;%
+R+   arrange(date) %&gt;%
+R+   mutate(cum_ret = cumprod(1 + Return) * 100) %&gt;%
+R+   ggplot() +
+R+   geom_line(aes(x = date, y = cum_ret, color = Asset), 
+R+             size = 0.1,
+R+             alpha = 0.5) +
+R+   facet_wrap( ~ Universe, scales = &quot;free_y&quot;) +
+R+   labs(title = &quot;Ensemble of Cumulative Returns&quot;,
+R+        subtitle = &quot;12 Realizations for a Market of 20 Assets&quot;) +
+R+   theme_bw() +
+R+   theme(legend.position = &quot;none&quot;) + theme(axis.text.x=element_text(angle = 90))</code></pre>
+<p><img src="vignette_files/figure-html/mc_market-1.png" width="100%" height="80%" style="display: block; margin: auto;" /></p>
+<div class="page-break-after"></div>
+</div>
+</div>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1>References</h1>
+<div id="refs" class="references">
+<div id="ref-sgt">
+<p>Davis C (2015). <em>Sgt: Skewed Generalized T Distribution Tree</em>. Retrieved from <a href="https://CRAN.R-project.org/package=sgt">https://CRAN.R-project.org/package=sgt</a></p>
+</div>
+<div id="ref-copula">
+<p>Hofert M, Kojadinovic I, Maechler M, Yan J (2020). <em>Copula: Multivariate Dependence with Copulas</em>. Retrieved from <a href="https://CRAN.R-project.org/package=copula">https://CRAN.R-project.org/package=copula</a></p>
+</div>
+<div id="ref-laurent">
+<p>Laurent S (2004). “Analytical Derivates of the Aparch Model.” <em>Computational Economics</em>, <strong>24</strong>(1), 51–57.</p>
+</div>
+<div id="ref-ruenzi2011">
+<p>Ruenzi S, Weigert F (2011). “Extreme Dependence Structures and the Cross-Section of Expected Stock Returns.” In <em>EFA 2011 meetings paper</em>.</p>
+</div>
+<div id="ref-ruppert">
+<p>Ruppert D, Matteson DS (2011). <em>Statistics and Data Analysis for Financial Engineering</em> Vol. 13. Springer.</p>
+</div>
+<div id="ref-syriopoulos2009">
+<p>Syriopoulos T, Roumpis E (2009). “Dynamic Correlations and Volatility Effects in the Balkan Equity Markets.” <em>Journal of International Financial Markets, Institutions and Money</em>, <strong>19</strong>(4), 565–587.</p>
+</div>
+<div id="ref-wang2012">
+<p>Wang P, Sullivan RN, Ge Y (2012). “Risk-Based Dynamic Asset Allocation withExtreme Tails and Correlations.” <em>The Journal of Portfolio Management</em>, <strong>38</strong>(4), 26–42.</p>
+</div>
+</div>
+</div>
+</main>
+
+<footer class="article-footer">
+<h3 class="affil-header">Affiliation:</h3>
+<address>
+<p class="author">Nathan Potgieter</p>
+<p class="author-affil">Stellenbosch University</p>
+<p class="author-address"><p>First line<br />
+Second line</p></p>
+<p>E-mail: <a href="mailto:19959672@sun.ac.za" class="email">19959672@sun.ac.za</a></p>
+<p>URL: <a href="https://rstudio.com" class="uri">https://rstudio.com</a></p>
+</address>
+<div class="last-page-footer">
+<p class="jss-meta">
+<img class="journal-name" alt="Journal of Statistical Software" src="https://www.jstatsoft.org/public/journals/1/homeHeaderTitleImage_en_US.png"> <a class="uri" href="https://www.jstatsoft.org/">http://www.jstatsoft.org/</a><br>
+published by the Foundation for Open Access Statistics <a class="uri" href="http://www.foastat.org/">http://www.foastat.org/</a>
+</p>
+<p class="footer-issue">
+MMMMMM YYYY, Volume VV, Issue II
+<br><a href="https://doi.org/10.18637/jss.v000.i00" class="doi">doi: 10.18637/jss.v000.i00</a>
+</p>
+<p class="info-dates">
+<em>Submitted:</em> yyyy-mm-dd<br>
+<em>Accepted:</em> yyyy-mm-dd
+</p>
+</div>
+</footer>
+</article>
+
+
+<script>
+// when the page is about to reload via servr, remember the scroll position
+document.addEventListener('servr:reload', function(e) {
+  sessionStorage.setItem('pagedown-scroll', window.scrollY);
+});
+</script>
+</body>
+</html>

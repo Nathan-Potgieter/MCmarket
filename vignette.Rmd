@@ -69,23 +69,24 @@ This example generates k periods of returns for D Assets across N counter-factua
 
 ## gen_cor
 
-This function allows users to easily generate a user defined _ad hoc_ correlation
-matrix with up to 4 layers of clusters.
+This function allows users to easily generate a user-defined ad hoc correlation matrix with up to four layers of clusters.
 
 ### Parameters: gen_cor
 
-- D The number of variables, the output is a D by D correlation matrix.
+- D the number of variables. The output is a D by D correlation matrix.
 - clusters a character string specifying the type of cluster structure. Available options are:
-    + "none", for a correlation matrix with significant correlations, but no clusters.
+    + "none" for a correlation matrix with no clusters, but significant correlation
+ between constituents.
     + "non-overlapping" for a correlation matrix with one layer of clusters.
-    + "overlapping" for a correlation matrix with up to 4 layers and a set number of clusters per layer.
+    + "overlapping" for a correlation matrix with up to four layers and a set number of clusters per layer.
 - num_clusters 
-    + If clusters = "none" num_clusters is not used.
-    + If clusters = "non-overlapping" then num_clusters is an integer indicating the number of clusters.
-    + If clusters = "overlapping" then num_clusters is a vector of length less than or equal to 4. The length of num_clusters specifies the number of  cluster layers and the integers within the vector specify the number of clusters per layer. It is preferable to arranged the vector in descending order, but failing to do so can result in unique output, which may not contain the intended number of layers. Additionally, using combinations with repeating number of clusters, like for example num_clusters = C(10, 10, 5, 5)) will produce fewer layers, but unique intra cluster correlations (See examples).
+    + If clusters = "none", then num_clusters is not used.
+    + If clusters = "non-overlapping", then num_clusters is an integer indicating the number of clusters.
+    + If clusters = "overlapping", then num_clusters is a vector of length less than or equal to four. The length of num_clusters specifies the number of cluster layers and the integers within the vector specify the number of clusters per layer. It is preferable to arrange the vector in descending order, since failing to do so can result in a unique output, which may not contain the intended number of layers. Additionally, using combinations with repeating numbers of clusters, for example num_clusters = C(10, 10, 5, 5)) will produce fewer layers, but unique intra-cluster correlations (See examples).
 
-- This function returns a D by D correlation matrix.
-```{r gen_cor, message=FALSE, warning=FALSE}
+- Value
+    + This function returns a D by D correlation matrix.
+```{r gen_cor, message=FALSE, warning=FALSE, fig.width=4, fig.height=4, out.height='42%', out.width='42%'}
 ### Loading required packages.
 library("MCmarket")
 library("ggcorrplot")
@@ -104,38 +105,38 @@ cor3 <- gen_corr(D = 50, clusters = "overlapping", num_clusters = c(10, 5, 2))
 ggcorrplot(cor3, title = "Three Layers of Overlapping Clusters")
 ```
 
+\newpage
 ## sim_garch
 
- This function takes a vector of random numbers, referred to as innovations, and
- induces mean and variance persistence by inserting them into an ARMA(1,1) + APARCH(1,1) model.
- 
+This function takes a vector of random numbers, referred to as innovations, and induces mean and variance persistence by inserting them into an ARMA(1,1) + APARCH(1,1) model.
 
 ### Parameters: sim_garch
 
-- innovations a vector containing the random numbers/ innovations of an
- ARIMA + GARCH process.
-- omega a positive value defining the coefficient of the variance equation, default is 5e-04.
-- gamma a value defining the APARCH leverage parameter in the variance equation. The default of 0, implies no leverage effect and therefore, corresponds to the standard GARCH model.
-- alpha a value defining the value of the autoregressive variance coefficient, default is 0.
-- beta a value defining the variance coefficient, default is 0.
-- mu  a value defining the mean or drift term, default is 0.
-- ar  a value defining the autoregressive ARMA coefficient, default is 0.
-- ma a value defining the moving average ARMA coefficient, default is 0.
-- delta a strictly positive value the delta parameter of the APARCH model. The default of 2 corresponds with the standard GARCH model.
+- innovations  a vector containing the random numbers or the innovations of the ARIMA + GARCH process.
+- omega a positive value defining the coefficient of the variance equation. The default is 5e-04.
+- gamma a value defining the APARCH leverage parameter in the variance equation. The default of 0 implies no leverage effect and therefore, corresponds to the standard GARCH model.
+- alpha a value defining the autoregressive variance coefficient. The default is 0.
+- beta a value defining the variance coefficient. The default is 0.
+- mu  a value defining the mean. The default is 0.
+- ar  a value defining the autoregressive ARMA coefficient. The default is 0.
+- ma a value defining the moving average ARMA coefficient. The default is 0.
+- delta a strictly positive value defining the delta parameter of the APARCH model. The default is 2, which corresponds to the standard GARCH model.
 - simple a logical parameter indicating if the output should be a simple vector containing just the resulting ARIMA + GARCH series, or if FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA + APARCH series.
 
-- If simple = TRUE this function returns a vector of the resulting ARMA + APARCH series. Else if simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA + APARCH series. Note the length of the resulting series will be one observation less than that that of the innovations as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
+- Value
+    + If simple = TRUE this function returns a vector of the resulting ARMA + APARCH series. Else if simple = FALSE a three column dataframe containing z - the innovations, h - the conditional variance and y - ARMA + APARCH series. Note the length of the resulting series will be one observation less than that that of the innovations as ARMA(1,1) + APARCH(1,1) model effectively consumes this lag when producing its first value.
  
  - Note  
-    1) It is suggested that the randomly distributed numbers be mean zero and standard
- deviation one, as these attributes can be set within sim_garch.
-    2) For more information on the ARMA + APARCH parameters see: Ruppert, D. and Matteson, D.S., 2011. Statistics and data analysis for financial engineering (Vol. 13). New York: Springer.
+    1) It is suggested that the randomly distributed numbers have a mean of zero and standard deviation of one, as these attributes can be set within sim_garch.
+    2) For more information on the ARMA + APARCH parameters see @ruppert.
 
 ### Examples: sim_garch
 
 ```{r sim_garch, message=FALSE, warning=FALSE, fig.width=6, fig.height=5, out.height='70%', out.width='80%'}
+### Loading required packages.
 library('MCmarket')
 library('tidyverse')
+
 ### Creating series of 501 innovations
 set.seed(586423)
 inno <-  rnorm(501)
@@ -164,37 +165,41 @@ GARCH %>% na.omit() %>%
 
 ```
 
+\newpage
 ## sim_market
 
-This function simulates a series of returns for an asset market with a wide range of user specified cross-section and time-series risk-return properties.
+This function simulates a series of returns for an asset market with a wide range of user-defined cross-section and time-series risk-return properties.
     
 ### Parameters: sim_market
 
-- corr a correlation matrix specifying the correlation structure of the simulated data. The number of variables simulated is equal to the number of columns/rows. When using mv_dist = "clayton" then simulated returns do not adhere to this correlation matrix.
+- corr a correlation matrix specifying the correlation structure of the simulated data. The number of variables simulated is equal to the number of columns/rows. When using mv_dist = "clayton", then simulated returns do not adhere to this correlation matrix.
 - k a positive integer indicating the number of time periods to simulate.
-- mv_dist a string specifying the multivariate distribution. Can be one of c("norm", "t", "clayton"), these correspond to the respective multivariate normal, t and Clayton distributions. This will effect how the returns are cross-sectionally distributed. When using mv_dist = "clayton" assets will exhibit high left-tail dependence, but will not adhere to the user specified correlation matrix.
-- mv_df degrees of freedom of the multivariate t distribution (> 0, maybe non-integer). The default is 4 and is only needed when mv_dist = "t".
-- clayton_param a value (> 0, maybe non-integer) indicating the parameter of the Clayton copula. The default is 1 and is only needed when mv_dist = "clayton".
-- marginal_dist a string variable specifying the univariate distribution of the asset return series. This can be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t distributions respectively. Default is "norm".
--  marginal_dist_model list containing the relevant parameters for the chosen _marginal_dist_ model. 
+- mv_dist a string specifying the multivariate distribution. It can be one of c("norm", "t", "clayton"), these
+ correspond to the respective multivariate normal, t and Clayton distributions. This will effect how the returns are cross-sectionally distributed. When using mv_dist = "clayton", assets will exhibit high left-tail dependence, but will not adhere to the user-defined correlation matrix.
+- mv_df degrees of freedom of the multivariate t distribution (> 0, can be a non-integer). The default is 4 and is only needed when mv_dist = "t".
+- clayton_param a value (> 0, can be a non-integer) indicating the parameter of the Clayton copula. The default is 1 and is only needed when mv_dist = "clayton".
+- marginal_dist a string variable specifying the univariate distribution of the asset return series. This can be one of c("norm", "t", "sgt") referring to the normal, student-t and skewed-generalized-t distributions, respectively. Default is "norm". 
+-  marginal_dist_model list containing the relevant parameters for the chosen marginal_dist_ model.
     + marginal_dist = "norm" accepts the mean (mu) and standard deviation (sd) arguments with their respective defaults set to list(mu = 0, sd = 1).
     + marginal_dist = "t" accepts the non-centrality parameter (ncp) and degrees of freedom (df) arguments, default values are list(ncp = 0, df = 5).
-    + marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note lambda, p and q have no defaults and must therefore, be set by the user. 
-    + For more information on the parameters see _?sgt::sgt_.
+    + marginal_dist = "sgt" accepts the mean (mu), standard deviation (sd), lambda, p and q parameters list(mu = 0, sigma = 1, lambda, p, q). Note that lambda, p and q have no defaults and must, therefore, be set by the user. For more information on the parameters see ?sgt::sgt. 
     
-- ts_model a list containing various ARMA + APGARCH model parameters. These parameters specify the time series properties of the simulated returns. Note that parameter combinations resulting in non-stationary of the mean or variance will produce NAN's and that the maximum model lag is 1.
-    + The default is ts_model = NULL, in which case the time-series properties are not induced, however, if ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset simply insert a vector of length equal to the number of assets, the first element of the vector will correspond to Asset_1, the 2nd to Asset_2 ect...
+- ts_model a list containing various ARMA + APGARCH model parameters. These parameters specify the time-series properties of the simulated returns. Note that parameter combinations resulting in non-stationarity of the mean or variance will produce NAN's and that the maximum lag allowed for any given parameter is 1. 
+    + The default is ts_model = NULL, in which case the time-series properties are not induced, however, if ts_model = list() then the default values are list(omega = 5e-04, alpha = 0, gamma = NULL, beta = 0, mu = 0, ar = NULL, ma = NULL, delta = 2). In order to set different parameters for each asset, simply insert a vector of length equal to the number of assets, the 1st element of the vector will correspond to Asset_1, the 2nd to Asset_2 ect...
     + For more details on the ARMA + APGARCH, see the ?sim_garch and the "model" parameter in ?fGarch::garchSpec.
-    
-- progress a logical value indicating if sim market should produce a progress bar when iterated over. See examples on how to use correctly.
+- a logical value indicating if sim market should produce a progress bar when iterated over. See examples on how to use correctly.
+    + Due to memory concerns, when simulating many markets it is suggested that users use map() over map_dfr(). map_dfr() produces a long/tidy data set and is therefore, useful when wanting to produce a plot with ggplot2.
+
+- Value
+    + This function returns a tidy tibble containing a date, Asset and Return column.
 
 - Note
-    1) it is suggested that, if the ts_model argument is used, then the marginal distributions be left as list(mu = 0, sd = 1) for marginal_dist = "norm" and "sgt", and list(ncp = 0) for marginal_dist = "t". If this is not done, a warning message will appear. These attributes are better off being set in the ts_model argument, see the mu and omega parameters.
-    2) When simulating many markets, due to memory concerns, it is suggested that users use _map()_ over _map_dfr()_. _map_dfr()_ produces a long/tidy data set and is therefore, useful when wanting to produce a plot with ggplot2.
+    + It is suggested that if the ts_model argument is used, then the marginal distributions be left as list(mu = 0, sd = 1) for marginal_dist = "norm" or "sgt", and list(ncp = 0) for marginal_dist = "t". If this is not done, a warning message will appear. It is better to set these attributes with the ts_model argument, see the mu and omega parameters.
 
 ### Examples: sim_market
 
 ```{r sim_market, eval=FALSE, message=TRUE, warning=TRUE, include=TRUE}
+### Loading required packages.
 library('MCmarket')
 library('tidyverse')
 #=============================
@@ -202,7 +207,6 @@ library('tidyverse')
 #=============================
 ### creating a correlation matrix of 50 assets to use as an input in sim_asset_market.
 corr <- gen_corr(D = 20, clusters = "none")
-
 ### simulating 500 periods of returns across 50 assets.
 set.seed(12345)
 market_data <-
@@ -219,7 +223,6 @@ market_data <-
                                     gamma = 0.001,
                                     delta = 1.95),
                     progress = FALSE)
-
 #==================================================
 # Performing Monte Carlo's with a Progress bar
 #==================================================
@@ -248,26 +251,28 @@ market <- map(1:N,
 
 ```
 
-
+\newpage
 ## mc_market
 
-This function performs a Monte Carlo simulation by iterating over the the _sim_market_ function N times. It is primerially intended for users who are not comfortable using the _purrr::map_ functions.
+This function performs a Monte Carlo simulation by iterating over the the sim_market function N times. It is intended for users who are not comfortable using the purrr::map functions.
 
 ### Parameters: mc_market
 
 - Note 
-    1) see _?sim_market_ for information on _mc_market's_ other parameters.
-    2) see examples under _sim_market_ for instructions on how to add an on screen progress bar when performing the Monte Carlo simulation, this is recommended for simulations with N >1000 since they can take a number of minuets to complete. 
+    1) see ?sim_market for information on the other parameters.
+    2) See examples under sim_market for instructions on how to add an on-screen progress bar when performing the Monte Carlo simulation, this is recommended for simulations with N >1000 since they can take a number of minuets to complete.
     
 - N a positive integer indicating the number of markets to simulate.
 - list a logical value indicating whether the output should be a list of tibbles or a single long tibble (see return).
-     + Due to memory issues associated with list = FALSE, list = TRUE is recommend for N > 500. List = FALSE is best used for tidy output that can easily be plotted with ggplot2 (see example).
+     + Due to memory issues associated with list = FALSE, list = TRUE is recommend for N > 500. List = FALSE is best used for tidy output that can easily be plotted with ggplot2 (see example)a logical value indicating whether the output should be a list of tibbles or a single long tibble (see return). Due to memory issues associated with list = FALSE, list = TRUE is recommended for N > 500. List = FALSE is best used for tidy output that can easily be plotted with ggplot2 (see example).
      
-If list = TRUE (default), this function returns a list of length N with each entry containing a tidy tibble with a  date, Asset and Return column. Else, if list = FALSE it returns a single tidy tibble with date, Universe, Asset and Return columns.
-
+- Value
+    + if list = TRUE (default), a list of length N where each entry contains a tidy tibble with a date, Asset and Return column. Else if list = FALSE a single tidy tibble with date, Universe, Asset and Return columns.
+    
 ### Examples: mc_market
 
 ```{r mc_market, eval=TRUE, message=FALSE, warning=FALSE, include=TRUE, fig.width=6, fig.height=5, out.height='80%', out.width='100%'}
+### Loading required packages.
 library('MCmarket')
 library('tidyverse')
 

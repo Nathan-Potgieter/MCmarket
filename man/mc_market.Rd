@@ -21,11 +21,11 @@ mc_market(
 \item{N}{a positive integer indicating the number of markets to simulate.}
 
 \item{list}{a logical value indicating whether the output should be a list of tibbles or a single long tibble (see return).
-Due to memory issues associated with list = FALSE, list = TRUE is recommend for N > 500. List = FALSE is
+Due to memory issues associated with list = FALSE, list = TRUE is recommended for N > 500. List = FALSE is
 best used for tidy output that can easily be plotted with ggplot2 (see example).}
 }
 \value{
-if list = TRUE (default), a list of length N with each entry containing a tidy tibble with a  date,
+if list = TRUE (default), a list of length N where each entry contains a tidy tibble with a date,
 Asset and Return column. Else if list = FALSE a single tidy tibble with date, Universe, Asset and Return columns.
 }
 \description{
@@ -35,7 +35,7 @@ It is intended for users who are not comfortable using the purrr::map functions.
 \note{
 (1) see ?sim_market for information on the other parameters.
 
-(2) See examples under sim_market for instructions on how to add an on screen progress bar when performing
+(2) See examples under sim_market for instructions on how to add an on-screen progress bar when performing
 the Monte Carlo simulation, this is recommended for simulations with N >1000 since they can take a number of
 minuets to complete.
 }
